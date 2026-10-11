@@ -1,6 +1,6 @@
 # Community publication setup
 
-These files are publication drafts, not evidence that GitHub features or discussions are already live. Complete this checklist after the owner approves the public package and banner.
+Launch completed on 2026-10-11; see [publication status](../../docs/COMMUNITY_STATUS.md) for actual links and verification. This checklist remains for maintainers preparing future launches. Pinning the Welcome discussion is optional and was not performed by the API publication.
 
 1. Confirm the approved MIT license and contribution policy are present in the public package. Review third-party code/assets and retain their required notices.
 2. Complete the public-content and history audit before changing visibility or pushing. Remove private identifiers from screenshots, test fixtures, logs and generated artifacts as well as Markdown.

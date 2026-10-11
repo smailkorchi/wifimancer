@@ -6,7 +6,7 @@ Wifi Mancer includes a root helper and network-facing discovery parsers. Treat a
 
 Do not post vulnerability details, exploits, credentials, packet captures or private network data in an issue or discussion.
 
-When private vulnerability reporting is enabled, use GitHub's **Report a vulnerability** action on this repository's [security advisories page](https://github.com/smailkorchi/wifimancer/security/advisories). This document does not assert that reporting is already enabled. If the action is unavailable, open an issue titled **Private security contact requested**, with no technical details or attachments, and wait for a maintainer to provide a private route.
+Private vulnerability reporting is enabled for this repository (verified 2026-10-11). Use GitHub's **Report a vulnerability** action on the [security advisories page](https://github.com/smailkorchi/wifimancer/security/advisories). If the action is unavailable, open an issue titled **Private security contact requested**, with no technical details or attachments, and wait for a maintainer to provide a private route.
 
 Include privately:
 

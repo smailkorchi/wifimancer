@@ -6,7 +6,7 @@ A native macOS app for discovering devices, inspecting network identity and mana
 
 **Experimental community project.** Discovery is incomplete on some networks. The active targeting engine covers IPv4 on compatible local networks; it cannot guarantee Internet blocking for every device or router. IPv6, isolation and visibility limitations remain. A targeted device is not proof of a blocked Internet connection.
 
-[Roadmap](ROADMAP.md) · [Command status](docs/COMMAND_STATUS.md) · [Contributing](CONTRIBUTING.md) · [Discussions](https://github.com/smailkorchi/wifimancer/discussions) · [Security](SECURITY.md)
+[Community launch](docs/COMMUNITY_STATUS.md) · [Roadmap](ROADMAP.md) · [Command status](docs/COMMAND_STATUS.md) · [Contributing](CONTRIBUTING.md) · [Discussions](https://github.com/smailkorchi/wifimancer/discussions) · [Security](SECURITY.md)
 
 ## What is here
 
