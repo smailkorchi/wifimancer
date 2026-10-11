@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Wifi Mancer</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleGetInfoString</key>
+	<string>Wifi Mancer 1.0.0, © 2026 El Qorchi Ismail</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Wifi Mancer</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<false/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_services._dns-sd._udp.</string>
+		<string>_device-info._tcp.</string>
+		<string>_airplay._tcp.</string>
+		<string>_raop._tcp.</string>
+		<string>_companion-link._tcp.</string>
+		<string>_smb._tcp.</string>
+		<string>_afpovertcp._tcp.</string>
+		<string>_ssh._tcp.</string>
+		<string>_sftp-ssh._tcp.</string>
+		<string>_http._tcp.</string>
+		<string>_https._tcp.</string>
+		<string>_rfb._tcp.</string>
+		<string>_rtsp._tcp.</string>
+		<string>_googlecast._tcp.</string>
+		<string>_printer._tcp.</string>
+		<string>_ipp._tcp.</string>
+		<string>_ipps._tcp.</string>
+		<string>_hap._tcp.</string>
+		<string>_homekit._tcp.</string>
+		<string>_apple-mobdev2._tcp.</string>
+		<string>_workstation._tcp.</string>
+		<string>_spotify-connect._tcp.</string>
+		<string>_eppc._tcp.</string>
+		<string>_net-assistant._udp.</string>
+	</array>
+	<key>NSDisablePersistenceUI</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 El Qorchi Ismail. All rights reserved.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>WifiMancer needs local network access to discover devices on your Wi-Fi.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>macOS hides Wi-Fi network names from apps unless they have Location permission. Wifi Mancer never reads your location — it only uses this to read the SSID you're already connected to.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>macOS hides Wi-Fi network names from apps unless they have Location permission. Wifi Mancer never reads your location — it only uses this to read the SSID you're already connected to.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>macOS hides Wi-Fi network names from apps unless they have Location permission. Wifi Mancer never reads your location — it only uses this to read the SSID you're already connected to.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSQuitAlwaysKeepsWindows</key>
+	<false/>
+	<key>SMPrivilegedExecutables</key>
+	<dict>
+		<key>com.wifimancer.helper</key>
+		<string>anchor apple generic</string>
+	</dict>
+</dict>
+</plist>

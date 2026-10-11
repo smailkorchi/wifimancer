@@ -1,0 +1,43 @@
+Wifi Mancer — experimental source project
+Original source: MIT. See LICENSE and THIRD_PARTY_NOTICES.md.
+
+The native app targets Apple Silicon and declares macOS 14 or later.
+That is a build configuration, not a tested compatibility matrix.
+
+BUILD AND INSTALL
+
+Build as your normal user using Scripts/bootstrap.sh and Scripts/build.sh.
+Review README.md for the current installation and permission steps.
+
+Place your reviewed app at /Applications/Wifi Mancer.app. Personal ad hoc
+builds need the reviewed Scripts/install-helper.sh run with administrator
+authentication to install the helper and exact client-signature pin.
+Updating the app or helper requires refreshing that pin. A PKG installation
+alone does not establish a verified, authenticated helper connection.
+
+This project does not provide a certified/notarized binary release. Do not
+turn off system security to run an untrusted build. The legacy broad
+clean-install script is disabled.
+
+CURRENT LIMITS
+
+Discovery shows observed devices, not a guaranteed complete AP client list.
+Unknown identity is displayed as unknown. IPv4 targeting depends on local
+network compatibility; it does not guarantee complete Internet blocking.
+IPv6 remains outside the active targeting session. Captured traffic counters
+are not verified WAN direction or reclaimed bandwidth. Schedule settings
+are not a verified scheduling engine. Read ROADMAP.md and
+docs/COMMAND_STATUS.md for implementation and verification gaps.
+
+Use only networks/devices you own or are explicitly authorized to administer.
+Live disruption, playback and radio changes require separate test approval.
+
+SUPPORT AND REMOVAL
+
+Use the repository's issue/discussion templates; redact identifiers and
+credentials. Follow SECURITY.md for private vulnerability reporting.
+
+Stop any active session and wait for its cleanup before removal. Preserve
+profiles and diagnostics you need. The current repository has no verified
+complete uninstaller for every helper installation path; removal is tracked
+as release-hardening work. Do not use disk-wide deletion or cache resets.

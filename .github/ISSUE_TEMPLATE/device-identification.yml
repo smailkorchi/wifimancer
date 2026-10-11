@@ -1,0 +1,36 @@
+name: Device identification or icon
+description: Report an incorrect name, model, classification or missing icon.
+title: "[Device] "
+body:
+  - type: markdown
+    attributes:
+      value: "Use synthetic identifiers and redacted protocol samples. Unknown is preferable to a guessed model. Do not trigger playback or change a device to collect identification evidence."
+  - type: input
+    id: environment
+    attributes:
+      label: Revision and macOS version
+    validations:
+      required: true
+  - type: textarea
+    id: identity
+    attributes:
+      label: Expected and displayed identity
+      description: "Public product/model name, expected device class, actual label/icon and affected screens. Omit serials, device UUIDs and personal names."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Identification evidence
+      description: "Which source supports the classification: advertised model/service, manufacturer clue, explicit user label or other observation? Include age/conflict information when available. Redact addresses and instance identifiers consistently."
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Publication check
+      options:
+        - label: "I redacted credentials, SSIDs, real addresses, serials, device UUIDs, personal hostnames and user paths from all samples and screenshots."
+          required: true
+        - label: "The reported device is mine or I am explicitly authorized to administer it."
+          required: true

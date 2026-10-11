@@ -1,0 +1,27 @@
+name: Feature proposal
+description: Propose a focused improvement with a verifiable result.
+title: "[Proposal] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Concrete problem
+      description: "Describe the user's action, current result and missing information or behavior."
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Proposed result and verification
+      description: "The smallest useful change, how an offline check could verify it, dependencies and known limits. Review the selected roadmap first."
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope and privacy
+      options:
+        - label: "I removed private device/network information and credentials."
+          required: true
+        - label: "This proposal stays within authorized administration and does not depend on unauthorized disruption or bypassing protections."
+          required: true

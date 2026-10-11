@@ -1,0 +1,20 @@
+body:
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Problem and proposed result
+      description: "Read the roadmap first. State the smallest useful change and a way to verify it."
+    validations:
+      required: true
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Evidence, tradeoffs and open questions
+      description: "Distinguish observed behavior from assumptions. Include dependency/license impact when relevant."
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Publication check
+      options:
+        - label: "I removed credentials and private device/network identifiers."
+          required: true

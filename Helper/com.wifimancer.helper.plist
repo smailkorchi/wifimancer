@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.wifimancer.helper</string>
+
+    <!--
+      BundleProgram: path is relative to the enclosing app bundle, so
+      SMAppService can launch this helper whether the .app sits in
+      /Applications, ~/Applications, or Xcode's DerivedData. The previous
+      absolute Program path worked only for an /Applications install and
+      broke every dev iteration.
+    -->
+    <key>BundleProgram</key>
+    <string>Contents/Library/LaunchDaemons/com.wifimancer.helper</string>
+
+    <key>MachServices</key>
+    <dict>
+        <key>com.wifimancer.helper</key>
+        <true/>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>StandardErrorPath</key>
+    <string>/var/log/wifimancer.helper.err.log</string>
+
+    <key>StandardOutPath</key>
+    <string>/var/log/wifimancer.helper.out.log</string>
+</dict>
+</plist>

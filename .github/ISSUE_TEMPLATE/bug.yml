@@ -1,0 +1,37 @@
+name: Bug report
+description: Report a reproducible app, helper, layout or state problem.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "For vulnerabilities, follow SECURITY.md instead. Do not attach packet captures or unredacted logs. An Armed label is not proof of internet blocking."
+  - type: input
+    id: version
+    attributes:
+      label: Revision and environment
+      description: "Commit or app version, macOS version, Mac architecture and build/install method. No usernames or home paths."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Smallest reproduction
+      description: "Steps, expected behavior and actual behavior. Prefer an offline fixture. Do not run a new disruptive test for this report."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and limits
+      description: "Redacted error text or screenshot; exact checks performed; what remains unverified. For connectivity observations, distinguish IPv4/IPv6 and Wi-Fi/cellular only if actually checked."
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Publication check
+      options:
+        - label: "I removed credentials, tokens, SSIDs, real IP/MAC addresses, serials, device UUIDs, personal hostnames and local user paths from the report and attachments."
+          required: true
+        - label: "Any device or network observations came from a network I own or am explicitly authorized to administer."
+          required: true

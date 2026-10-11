@@ -1,0 +1,15 @@
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question and context
+      description: "Include the app revision, macOS version and what you already checked. No credentials, real addresses, device UUIDs or user paths."
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Publication check
+      options:
+        - label: "I redacted private information and this is not a vulnerability disclosure."
+          required: true

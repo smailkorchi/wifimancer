@@ -1,0 +1,2998 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-11",
+  "scope": "All 99 AttackCatalog entries plus a source-reviewed non-Arsenal action appendix. No recipe execution or live network/media tests.",
+  "catalog_source_sha256": "85bae6a9d8e99024533402ae984db25f88ff42f48b8cc7f83726aaee24421934",
+  "totals": {
+    "commands": 99,
+    "categories": {
+      "ad": 6,
+      "bluetooth": 2,
+      "camera": 4,
+      "dns": 3,
+      "exploit": 4,
+      "iot": 6,
+      "media": 17,
+      "mitm": 2,
+      "mobile": 2,
+      "password": 6,
+      "printer": 4,
+      "recon": 10,
+      "router": 4,
+      "smb": 3,
+      "ssh": 2,
+      "web": 11,
+      "wireless": 13
+    },
+    "statuses": {
+      "incomplete": 5,
+      "known-defect": 20,
+      "limited-confirmation": 1,
+      "needs-validation": 64,
+      "sample-only": 7,
+      "scope-blocked": 2
+    },
+    "executors": {
+      "auto": 27,
+      "kali": 41,
+      "kaliRange": 13,
+      "local": 18
+    }
+  },
+  "status_definitions": {
+    "needs-validation": "Recipe exists; no end-to-end compatibility claim. Concrete verification work remains.",
+    "known-defect": "Source contains an observable mismatch or failure path; needs correction before supported status.",
+    "incomplete": "Required inputs, evidence, or workflow are absent.",
+    "sample-only": "Prints instructions/examples instead of performing the advertised operation.",
+    "scope-blocked": "Operation is not constrained to the selected authorized scope; keep unavailable pending redesign.",
+    "limited-confirmation": "Narrow historical live report; broader compatibility is unverified."
+  },
+  "shared_gaps": [
+    {
+      "id": "scope",
+      "description": "Authorization is a session checkbox, not a per-run allowlist. RF-range confirmation is a UI gate and is not enforced inside runSelected(). Network-wide commands can ignore the selected target. Scope-blocked entries should remain unavailable pending explicit scope review."
+    },
+    {
+      "id": "shell-arguments",
+      "description": "Attack.expanded substitutes names/SSIDs directly into shell strings. General recipes need typed/quoted arguments and fail-closed missing-input validation. The selected-file MediaAudioCommand path already quotes its arguments and has injection fixtures."
+    },
+    {
+      "id": "routing",
+      "description": "Auto routing compares only the first three IPv4 octets, rather than actual routes/netmasks; it does not prove remote reachability. Multicast/Bluetooth/RF tools often inspect the executor network, not the chosen LAN device."
+    },
+    {
+      "id": "dependencies",
+      "description": "Auto-install checks one declared executable/package only. Secondary binaries, wordlists, scripts, driver capabilities, noninteractive sudo, package availability and version compatibility are generally not preflighted. A nil package does not mean installed."
+    },
+    {
+      "id": "outcomes",
+      "description": "Most commands pipe into head/tail without pipefail. The final shell exit can be zero after the tool fails. The UI treats exit zero as success; generic recipes have no capability/finding outcome schema."
+    },
+    {
+      "id": "cancellation",
+      "description": "LocalClient terminates the shell and KaliClient terminates ssh; this does not prove child or remote jobs stopped. Shared temporary files and broad pkill lack per-run ownership. cancelled status/old-run events need explicit lifecycle handling."
+    },
+    {
+      "id": "media",
+      "description": "The three selected-file actions share a quoted bundled audio runner with scoped HTTP serving, SOAP parsing and delivery checks. This is stronger than old URL templates, but audio metadata and a fixed run limit do not establish arbitrary file/video compatibility. The UI has an implicit Downloads clip fallback when no file is selected; remove the fallback and require an explicit readable file."
+    },
+    {
+      "id": "range-probe",
+      "description": "KaliRangeProbe creates/deletes monitor interfaces and runs a scan; it is not a pure read. It hardcodes interface patterns, mixes interactive sudo with a batch SSH transport, and does not make scan/cleanup failure a reliable capability result."
+    },
+    {
+      "id": "verification",
+      "description": "No recipe was dispatched during this audit. Except the narrow historical SMART/DLNA report, end-to-end target success is unverified. Dependency metadata, danger labels and explanatory prose are claims to review, not compatibility evidence."
+    }
+  ],
+  "commands": [
+    {
+      "id": "recon.nmap.quick",
+      "title": "Quick port probe",
+      "category": "recon",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "nmap service database"
+      ],
+      "status": "needs-validation",
+      "gap": "Confirm installed nmap version, reachability and service-result parsing; headless execution is not a completed scan report.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.nmap.quick"
+      }
+    },
+    {
+      "id": "recon.nmap.full",
+      "title": "Full TCP version scan (1–10000)",
+      "category": "recon",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "nmap service database"
+      ],
+      "status": "needs-validation",
+      "gap": "First 10,000 ports only; description incorrectly gives an outside-range service as an example.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.nmap.full"
+      }
+    },
+    {
+      "id": "recon.nmap.vuln",
+      "title": "NSE vuln scripts",
+      "category": "recon",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "NSE scripts and script database"
+      ],
+      "status": "needs-validation",
+      "gap": "Review the selected NSE script set and per-script effects; validate findings rather than treating output as confirmed CVEs.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.nmap.vuln"
+      }
+    },
+    {
+      "id": "recon.nuclei.basic",
+      "title": "Nuclei templates (CVEs + misconfigs)",
+      "category": "recon",
+      "executor": "kali",
+      "primary_tool": "nuclei",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "nuclei templates"
+      ],
+      "status": "needs-validation",
+      "gap": "No templates/version pin or template-update health; assumes HTTP on port 80.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.nuclei.basic"
+      }
+    },
+    {
+      "id": "recon.searchsploit.banner",
+      "title": "Search Exploit-DB by version banner",
+      "category": "recon",
+      "executor": "auto",
+      "primary_tool": "searchsploit",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "nmap",
+        "Exploit-DB local data"
+      ],
+      "status": "needs-validation",
+      "gap": "Also needs nmap and a local exploit database; banner extraction and search matching are fragile.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.searchsploit.banner"
+      }
+    },
+    {
+      "id": "recon.tlsscan",
+      "title": "TLS / SSL audit (testssl.sh)",
+      "category": "recon",
+      "executor": "kali",
+      "primary_tool": "testssl.sh",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "testssl.sh support data"
+      ],
+      "status": "needs-validation",
+      "gap": "Assumes HTTPS on default port; needs tool-version checks and actionable parsed findings.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.tlsscan"
+      }
+    },
+    {
+      "id": "recon.theharvester",
+      "title": "OSINT email/domain harvest (theHarvester)",
+      "category": "recon",
+      "executor": "kali",
+      "primary_tool": "theHarvester",
+      "declared_install": {
+        "apt": "theharvester",
+        "brew": null
+      },
+      "additional_requirements": [
+        "host",
+        "provider/API configuration"
+      ],
+      "status": "known-defect",
+      "gap": "Reverse DNS is not an authorized domain boundary; example-domain fallback can query unrelated assets.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.theharvester"
+      }
+    },
+    {
+      "id": "recon.shodan.lookup",
+      "title": "Shodan lookup (external view)",
+      "category": "recon",
+      "executor": "kali",
+      "primary_tool": "shodan",
+      "declared_install": {
+        "apt": "shodan",
+        "brew": null
+      },
+      "additional_requirements": [
+        "Shodan account/API key"
+      ],
+      "status": "sample-only",
+      "gap": "Only prints a sample; no API-key input or selected-public-host validation. Sample references executor public IP.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.shodan.lookup"
+      }
+    },
+    {
+      "id": "recon.masscan",
+      "title": "Masscan all 65k ports (faster than nmap)",
+      "category": "recon",
+      "executor": "kali",
+      "primary_tool": "masscan",
+      "declared_install": {
+        "apt": "masscan",
+        "brew": null
+      },
+      "additional_requirements": [
+        "noninteractive sudo",
+        "suitable raw-packet interface"
+      ],
+      "status": "needs-validation",
+      "gap": "Root/raw-packet access and interface selection are not preflighted; piped fallback can mask failures.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.masscan"
+      }
+    },
+    {
+      "id": "recon.rustscan",
+      "title": "Rustscan + nmap pipeline",
+      "category": "recon",
+      "executor": "kali",
+      "primary_tool": "rustscan",
+      "declared_install": {
+        "apt": "rustscan",
+        "brew": null
+      },
+      "additional_requirements": [
+        "nmap",
+        "suitable file-descriptor limit"
+      ],
+      "status": "needs-validation",
+      "gap": "Requires nmap as a second tool; no dependency or open-file-limit health check.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "recon.rustscan"
+      }
+    },
+    {
+      "id": "web.whatweb",
+      "title": "Fingerprint web stack",
+      "category": "web",
+      "executor": "auto",
+      "primary_tool": "whatweb",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "reachable HTTP service"
+      ],
+      "status": "needs-validation",
+      "gap": "Assumes HTTP/default port; no scheme, TLS, virtual-host or structured fingerprint handling.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.whatweb"
+      }
+    },
+    {
+      "id": "web.nikto",
+      "title": "Nikto vulnerability scan",
+      "category": "web",
+      "executor": "auto",
+      "primary_tool": "nikto",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "Nikto databases",
+        "reachable HTTP service"
+      ],
+      "status": "needs-validation",
+      "gap": "No scan-policy selection, tuned service URL or structured finding validation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.nikto"
+      }
+    },
+    {
+      "id": "web.ffuf.dirs",
+      "title": "Directory bruteforce (top 1000 paths)",
+      "category": "web",
+      "executor": "kali",
+      "primary_tool": "ffuf",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "SecLists web-content wordlist"
+      ],
+      "status": "needs-validation",
+      "gap": "Fixed Linux wordlist is not checked; no wildcard-response calibration or selected service URL.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.ffuf.dirs"
+      }
+    },
+    {
+      "id": "web.feroxbuster",
+      "title": "Recursive directory scan (feroxbuster)",
+      "category": "web",
+      "executor": "kali",
+      "primary_tool": "feroxbuster",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "SecLists web-content wordlist"
+      ],
+      "status": "needs-validation",
+      "gap": "Fixed Linux wordlist and root URL; traversal budget and result semantics need validation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.feroxbuster"
+      }
+    },
+    {
+      "id": "web.wpscan",
+      "title": "WordPress audit",
+      "category": "web",
+      "executor": "auto",
+      "primary_tool": "wpscan",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "WordPress service",
+        "optional WPScan API token"
+      ],
+      "status": "needs-validation",
+      "gap": "Needs confirmed WordPress target, version pin and API/token handling for vulnerability coverage.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.wpscan"
+      }
+    },
+    {
+      "id": "web.sqlmap.basic",
+      "title": "SQL injection probe (sqlmap)",
+      "category": "web",
+      "executor": "kali",
+      "primary_tool": "sqlmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "explicit authorized HTTP request/parameters"
+      ],
+      "status": "incomplete",
+      "gap": "No parameter/request selection; testing only the root URL does not establish injection coverage.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.sqlmap.basic"
+      }
+    },
+    {
+      "id": "web.subfinder",
+      "title": "Subdomain enumeration (subfinder)",
+      "category": "web",
+      "executor": "kali",
+      "primary_tool": "subfinder",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "host",
+        "provider configuration"
+      ],
+      "status": "known-defect",
+      "gap": "Uses reverse-DNS hostname directly as a domain; missing public-domain input and scope validation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.subfinder"
+      }
+    },
+    {
+      "id": "web.gobuster.vhost",
+      "title": "Virtual host bruteforce (gobuster vhost)",
+      "category": "web",
+      "executor": "kali",
+      "primary_tool": "gobuster",
+      "declared_install": {
+        "apt": "gobuster",
+        "brew": null
+      },
+      "additional_requirements": [
+        "host",
+        "SecLists DNS wordlist",
+        "authorized domain"
+      ],
+      "status": "known-defect",
+      "gap": "Reverse-DNS/example-domain fallback may leave scope; fixed wordlist and domain must be explicit.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.gobuster.vhost"
+      }
+    },
+    {
+      "id": "web.dalfox.xss",
+      "title": "XSS scan (dalfox)",
+      "category": "web",
+      "executor": "kali",
+      "primary_tool": "dalfox",
+      "declared_install": {
+        "apt": "dalfox",
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized HTTP request/parameters"
+      ],
+      "status": "incomplete",
+      "gap": "Root URL only; needs explicit parameters/requests and evidence-based result handling.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.dalfox.xss"
+      }
+    },
+    {
+      "id": "web.httpx.probe",
+      "title": "Live web fingerprint (httpx)",
+      "category": "web",
+      "executor": "kali",
+      "primary_tool": "httpx",
+      "declared_install": {
+        "apt": "httpx-toolkit",
+        "brew": null
+      },
+      "additional_requirements": [
+        "ProjectDiscovery httpx binary"
+      ],
+      "status": "needs-validation",
+      "gap": "Package/binary identity and version must be checked; scan results are unstructured text.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.httpx.probe"
+      }
+    },
+    {
+      "id": "web.gitleaks",
+      "title": "Test for exposed .git/.env (curl)",
+      "category": "web",
+      "executor": "auto",
+      "primary_tool": "curl",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "curl",
+        "explicit HTTP service"
+      ],
+      "status": "needs-validation",
+      "gap": "This is a curl path probe, not Gitleaks; HTTP 200/size does not prove exposed secrets.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "web.gitleaks"
+      }
+    },
+    {
+      "id": "smb.netexec.enum",
+      "title": "Null-session SMB enum",
+      "category": "smb",
+      "executor": "kali",
+      "primary_tool": "netexec",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "SMB service"
+      ],
+      "status": "needs-validation",
+      "gap": "Anonymous SMB behavior, service compatibility and error/result parsing need fixtures.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "smb.netexec.enum"
+      }
+    },
+    {
+      "id": "smb.smbclient.list",
+      "title": "List shares (anonymous)",
+      "category": "smb",
+      "executor": "auto",
+      "primary_tool": "smbclient",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "SMB service"
+      ],
+      "status": "needs-validation",
+      "gap": "Anonymous listing only; absent authentication must be reported as limited coverage.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "smb.smbclient.list"
+      }
+    },
+    {
+      "id": "smb.netexec.spider",
+      "title": "Spider plus shares (auth required)",
+      "category": "smb",
+      "executor": "kali",
+      "primary_tool": "netexec",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized SMB credentials",
+        "spider_plus module"
+      ],
+      "status": "incomplete",
+      "gap": "Title says authentication required but command sends empty credentials; no credential input or output-artifact retrieval.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "smb.netexec.spider"
+      }
+    },
+    {
+      "id": "ssh.banner",
+      "title": "Banner + algos",
+      "category": "ssh",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "nmap NSE SSH scripts"
+      ],
+      "status": "needs-validation",
+      "gap": "Assumes port 22 and installed NSE scripts; no selected-port or structured algorithm assessment.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "ssh.banner"
+      }
+    },
+    {
+      "id": "ssh.hydra.short",
+      "title": "Hydra small common-creds (4 users × 25 pwds)",
+      "category": "ssh",
+      "executor": "kali",
+      "primary_tool": "hydra",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "wordlist or bundled fallback",
+        "protected per-run output"
+      ],
+      "status": "needs-validation",
+      "gap": "No lockout/rate-budget preflight; fixed shared temporary files and credential output require isolation/redaction.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "ssh.hydra.short"
+      }
+    },
+    {
+      "id": "cam.onvif.probe",
+      "title": "ONVIF probe",
+      "category": "camera",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "curl",
+        "ONVIF NSE support",
+        "raw UDP permissions"
+      ],
+      "status": "known-defect",
+      "gap": "Broadcast discovery is not constrained to the selected host; UDP privileges and NSE availability are unchecked.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "cam.onvif.probe"
+      }
+    },
+    {
+      "id": "cam.hikvision.creds",
+      "title": "Hikvision default credentials",
+      "category": "camera",
+      "executor": "auto",
+      "primary_tool": "curl",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "supported camera HTTP API"
+      ],
+      "status": "needs-validation",
+      "gap": "HTTP response code alone is not authenticated access; vendor paths/ports and lockout budget are unchecked.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "cam.hikvision.creds"
+      }
+    },
+    {
+      "id": "cam.rtsp.urls",
+      "title": "RTSP path bruteforce",
+      "category": "camera",
+      "executor": "auto",
+      "primary_tool": "curl",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "nc",
+        "timeout",
+        "RTSP service"
+      ],
+      "status": "known-defect",
+      "gap": "Declares curl but actually uses nc and timeout; default macOS lacks timeout. RTSP OPTIONS 200 does not prove a playable path.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "cam.rtsp.urls"
+      }
+    },
+    {
+      "id": "cam.snapshot",
+      "title": "Capture snapshot via ffmpeg",
+      "category": "camera",
+      "executor": "kali",
+      "primary_tool": "ffmpeg",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "ffmpeg RTSP decoder",
+        "authorized stream URL"
+      ],
+      "status": "needs-validation",
+      "gap": "Hardcoded vendor stream path, no credential input, shared output file and no app-side artifact retrieval.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "cam.snapshot"
+      }
+    },
+    {
+      "id": "router.creds.spray",
+      "title": "Default-credential sprayer (vendor cheatsheet)",
+      "category": "router",
+      "executor": "auto",
+      "primary_tool": "curl",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "supported router authentication flow",
+        "protected output"
+      ],
+      "status": "needs-validation",
+      "gap": "Response/cookie heuristics can misidentify successful login; no lockout policy and fixed shared response files.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "router.creds.spray"
+      }
+    },
+    {
+      "id": "router.default-accounts",
+      "title": "Default-credential sweep (nmap NSE)",
+      "category": "router",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "NSE http-default-accounts fingerprint data"
+      ],
+      "status": "needs-validation",
+      "gap": "Fingerprint-file path assumes Linux even when auto resolves to macOS; results need vendor/version validation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "router.default-accounts"
+      }
+    },
+    {
+      "id": "router.snmp",
+      "title": "SNMP community check",
+      "category": "router",
+      "executor": "kali",
+      "primary_tool": "onesixtyone",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "SNMP service",
+        "protected per-run wordlist"
+      ],
+      "status": "needs-validation",
+      "gap": "Only legacy community-string discovery; shared wordlist and absent SNMP version/port controls.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "router.snmp"
+      }
+    },
+    {
+      "id": "router.upnp",
+      "title": "UPnP enumeration",
+      "category": "router",
+      "executor": "kali",
+      "primary_tool": "upnpc",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "miniupnpc",
+        "multicast reachability from executor"
+      ],
+      "status": "known-defect",
+      "gap": "Ignores selected IP; discovers the Kali execution network rather than reliably inspecting the selected router.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "router.upnp"
+      }
+    },
+    {
+      "id": "ad.responder.short",
+      "title": "Responder LLMNR/NBT-NS poisoning (60 s)",
+      "category": "ad",
+      "executor": "kali",
+      "primary_tool": "responder",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized test network",
+        "verified remote interface",
+        "sudo",
+        "timeout"
+      ],
+      "status": "scope-blocked",
+      "gap": "Hardcoded remote interface and network-wide poisoning are not constrained to the selected device/scope. Keep unavailable pending scope/lifecycle redesign.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "ad.responder.short"
+      }
+    },
+    {
+      "id": "ad.kerberoast",
+      "title": "Kerberoast (impacket-getuserspns)",
+      "category": "ad",
+      "executor": "kali",
+      "primary_tool": "impacket",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "impacket-GetUserSPNs",
+        "authorized AD identity"
+      ],
+      "status": "incomplete",
+      "gap": "Missing required domain/principal input; no credential handling or protected hash-artifact workflow.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "ad.kerberoast"
+      }
+    },
+    {
+      "id": "ad.asreproast",
+      "title": "ASREPRoast (impacket-GetNPUsers)",
+      "category": "ad",
+      "executor": "kali",
+      "primary_tool": "impacket",
+      "declared_install": {
+        "apt": "impacket-scripts",
+        "brew": null
+      },
+      "additional_requirements": [
+        "impacket-GetNPUsers",
+        "authorized domain/user list"
+      ],
+      "status": "sample-only",
+      "gap": "Only prints a sample; domain/user-list inputs and artifact handling are not implemented.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "ad.asreproast"
+      }
+    },
+    {
+      "id": "ad.netexec.spray",
+      "title": "Password spray AD users (netexec smb)",
+      "category": "ad",
+      "executor": "kali",
+      "primary_tool": "netexec",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized domain/user list and credentials"
+      ],
+      "status": "sample-only",
+      "gap": "Only prints examples; no credentials/user-list UI, lockout budget or result parser.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "ad.netexec.spray"
+      }
+    },
+    {
+      "id": "ad.bloodhound.collect",
+      "title": "BloodHound collection (bloodhound-python)",
+      "category": "ad",
+      "executor": "kali",
+      "primary_tool": "bloodhound-python",
+      "declared_install": {
+        "apt": "bloodhound.py",
+        "brew": null
+      },
+      "additional_requirements": [
+        "domain/DNS configuration",
+        "authorized credentials"
+      ],
+      "status": "sample-only",
+      "gap": "Only prints a sample; no domain/credential input or protected archive retrieval.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "ad.bloodhound.collect"
+      }
+    },
+    {
+      "id": "ad.ldap.anon",
+      "title": "LDAP anonymous bind enum",
+      "category": "ad",
+      "executor": "kali",
+      "primary_tool": "ldapsearch",
+      "declared_install": {
+        "apt": "ldap-utils",
+        "brew": null
+      },
+      "additional_requirements": [
+        "LDAP service and valid search base"
+      ],
+      "status": "needs-validation",
+      "gap": "Empty search base and fixed LDAP defaults; modern ldapsearch option compatibility and result-base discovery need validation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "ad.ldap.anon"
+      }
+    },
+    {
+      "id": "media.airplay.scan",
+      "title": "Scan for AirPlay receivers on this LAN",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "atvremote",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "pyatv/atvremote",
+        "Bonjour reachability"
+      ],
+      "status": "needs-validation",
+      "gap": "LAN-wide discovery ignores selected device; pairing/protocol support and tool installation are not preflighted.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.airplay.scan"
+      }
+    },
+    {
+      "id": "media.airplay.sound",
+      "title": "Play sound on AirPlay receiver (this device)",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "atvremote",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "pyatv/atvremote",
+        "reachable external audio URL"
+      ],
+      "status": "needs-validation",
+      "gap": "Hardcoded external clip, receiver pairing/support and actual fetch/playback are not verified.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.airplay.sound"
+      }
+    },
+    {
+      "id": "media.airplay.video",
+      "title": "Play video on AirPlay receiver",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "atvremote",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "pyatv/atvremote",
+        "compatible video codec/URL"
+      ],
+      "status": "needs-validation",
+      "gap": "Hardcoded external video; no file picker, codec negotiation or playback confirmation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.airplay.video"
+      }
+    },
+    {
+      "id": "media.cast.scan",
+      "title": "Scan for Chromecasts (catt scan)",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "catt",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "catt",
+        "Cast discovery reachability"
+      ],
+      "status": "needs-validation",
+      "gap": "LAN-wide discovery is not selected-host execution; requires installed catt and multicast visibility.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.cast.scan"
+      }
+    },
+    {
+      "id": "media.cast.video",
+      "title": "Cast video to Chromecast",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "catt",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "catt",
+        "compatible Cast receiver and video URL"
+      ],
+      "status": "needs-validation",
+      "gap": "Hardcoded external video; no local-video selection, codec handling or confirmed rendering.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.cast.video"
+      }
+    },
+    {
+      "id": "media.airplay.localfile",
+      "title": "Play LOCAL audio file on AirPlay receiver",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "python3",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "bundled audio_push.py",
+        "python3",
+        "installed atvremote"
+      ],
+      "status": "needs-validation",
+      "gap": "Quoted selected-file runner has offline coverage; real AirPlay receivers, pairing and format support remain unverified.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": "Tests/Media and Tests/MediaCommand cover shared audio runner/quoting; not live compatibility",
+        "historical_live": null
+      },
+      "requires_audio_file": true,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.airplay.localfile"
+      }
+    },
+    {
+      "id": "media.audio.smart",
+      "title": "SMART audio push (DLNA → AirPlay → Cast → Sonos)",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "python3",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "bundled audio_push.py",
+        "python3",
+        "optional atvremote/catt/sonos fallbacks"
+      ],
+      "status": "limited-confirmation",
+      "gap": "Historical maintainer/user confirmation covers one DLNA TV and one audio clip only. AirPlay/Cast/Sonos, other codecs and video are not confirmed.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": "Tests/Media and Tests/MediaCommand cover shared audio runner/quoting; not live compatibility",
+        "historical_live": "Maintainer/user reported one successful SMART DLNA audio playback; not rerun in this audit"
+      },
+      "requires_audio_file": true,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.audio.smart"
+      }
+    },
+    {
+      "id": "media.dlna.push",
+      "title": "DLNA push audio — TV / speaker renderer",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "python3",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "bundled audio_push.py",
+        "python3",
+        "DLNA AVTransport receiver"
+      ],
+      "status": "needs-validation",
+      "gap": "DLNA runner has loopback coverage and shares the historically confirmed SMART path; this specific UI action is not independently verified across receivers.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": "Tests/Media and Tests/MediaCommand cover shared audio runner/quoting; not live compatibility",
+        "historical_live": null
+      },
+      "requires_audio_file": true,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.dlna.push"
+      }
+    },
+    {
+      "id": "media.bonjour.flood",
+      "title": "Bonjour service flood (visible names on every LAN Mac)",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "dns-sd",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "macOS dns-sd",
+        "nonstandard timeout command"
+      ],
+      "status": "known-defect",
+      "gap": "Network-wide registrations, broad pkill and background children lack ownership-safe cleanup; observation label understates state changes.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.bonjour.flood"
+      }
+    },
+    {
+      "id": "media.airplay.image",
+      "title": "Show image on Apple TV / AirPlay receiver",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "atvremote",
+      "declared_install": {
+        "apt": null,
+        "brew": "pyatv"
+      },
+      "additional_requirements": [
+        "pyatv/atvremote",
+        "compatible image URL"
+      ],
+      "status": "needs-validation",
+      "gap": "Description says stream_file but command uses play_url; installed formula, receiver pairing and JPEG rendering need validation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.airplay.image"
+      }
+    },
+    {
+      "id": "media.airplay.tts",
+      "title": "Speak text on AirPlay receiver (TTS)",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "say",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "macOS say",
+        "ffmpeg",
+        "python3",
+        "atvremote",
+        "LAN HTTP reachability"
+      ],
+      "status": "known-defect",
+      "gap": "Needs several undeclared tools; fixed HTTP port/interface assumptions and broad process cleanup are fragile. Text is hardcoded.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.airplay.tts"
+      }
+    },
+    {
+      "id": "media.cast.image",
+      "title": "Show image on Chromecast",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "catt",
+      "declared_install": {
+        "apt": null,
+        "brew": "catt"
+      },
+      "additional_requirements": [
+        "catt",
+        "compatible image URL"
+      ],
+      "status": "needs-validation",
+      "gap": "Description says cast_site but command uses cast; image rendering/tool formula and result confirmation remain unverified.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.cast.image"
+      }
+    },
+    {
+      "id": "media.cast.tts",
+      "title": "Speak text on Chromecast (Google TTS)",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "catt",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "catt",
+        "python3",
+        "external Google TTS availability"
+      ],
+      "status": "needs-validation",
+      "gap": "Hardcoded message and undocumented external TTS endpoint; needs user text, dependency checks and playback evidence.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.cast.tts"
+      }
+    },
+    {
+      "id": "media.cast.youtube",
+      "title": "Cast YouTube link to Chromecast",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "catt",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "catt",
+        "YouTube/receiver support"
+      ],
+      "status": "needs-validation",
+      "gap": "Hardcoded external video; no URL input or receiver/application support check.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.cast.youtube"
+      }
+    },
+    {
+      "id": "media.dlna.discover",
+      "title": "Discover DLNA media renderers (gssdp)",
+      "category": "media",
+      "executor": "kali",
+      "primary_tool": "gssdp-discover",
+      "declared_install": {
+        "apt": "gupnp-tools",
+        "brew": null
+      },
+      "additional_requirements": [
+        "gssdp-discover",
+        "timeout",
+        "valid Linux interface discovery"
+      ],
+      "status": "known-defect",
+      "gap": "Kali route is declared but interface discovery uses BSD route syntax; selected target is ignored.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.dlna.discover"
+      }
+    },
+    {
+      "id": "media.bell",
+      "title": "Sonos doorbell chime (60 s)",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "sonos",
+      "declared_install": {
+        "apt": null,
+        "brew": "soco-cli"
+      },
+      "additional_requirements": [
+        "soco-cli/sonos",
+        "compatible audio URL"
+      ],
+      "status": "needs-validation",
+      "gap": "Title says 60 seconds but no duration/owned-stop logic exists; remote clip and CLI formula need verification.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.bell"
+      }
+    },
+    {
+      "id": "media.sonos.play",
+      "title": "Play sound on Sonos speaker",
+      "category": "media",
+      "executor": "local",
+      "primary_tool": "sonos",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "soco-cli/sonos",
+        "compatible audio URL"
+      ],
+      "status": "needs-validation",
+      "gap": "Hardcoded external clip; installed CLI, receiver compatibility and playback outcome are unverified.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "media.sonos.play"
+      }
+    },
+    {
+      "id": "pwd.hashcat.wpa",
+      "title": "Crack WPA handshake with hashcat (rockyou)",
+      "category": "password",
+      "executor": "kali",
+      "primary_tool": "hashcat",
+      "declared_install": {
+        "apt": "hashcat",
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized WPA hash artifact",
+        "rockyou",
+        "compute backend"
+      ],
+      "status": "needs-validation",
+      "gap": "Uses a shared pre-existing hash file/wordlist; no selected-network binding, artifact picker or hardware preflight.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "pwd.hashcat.wpa"
+      }
+    },
+    {
+      "id": "pwd.hashcat.shadow",
+      "title": "Crack /etc/shadow hashes (sha512crypt)",
+      "category": "password",
+      "executor": "kali",
+      "primary_tool": "hashcat",
+      "declared_install": {
+        "apt": "hashcat",
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized SHA512-crypt hash file",
+        "rockyou",
+        "compute backend"
+      ],
+      "status": "needs-validation",
+      "gap": "Fixed file path and hash mode; needs authorized hash input, format detection and protected output.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "pwd.hashcat.shadow"
+      }
+    },
+    {
+      "id": "pwd.hashcat.netntlm",
+      "title": "Crack NetNTLMv2 hashes (Responder output)",
+      "category": "password",
+      "executor": "kali",
+      "primary_tool": "hashcat",
+      "declared_install": {
+        "apt": "hashcat",
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized NetNTLMv2 artifact",
+        "rockyou",
+        "compute backend"
+      ],
+      "status": "known-defect",
+      "gap": "Searches for session-log filenames rather than reliably selecting NetNTLMv2 hash records; artifact scope is not bound to target.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "pwd.hashcat.netntlm"
+      }
+    },
+    {
+      "id": "pwd.hydra.http",
+      "title": "Hydra HTTP-form brute (top 100 passwords)",
+      "category": "password",
+      "executor": "kali",
+      "primary_tool": "hydra",
+      "declared_install": {
+        "apt": "hydra",
+        "brew": null
+      },
+      "additional_requirements": [
+        "explicit authorized form/request and credentials"
+      ],
+      "status": "sample-only",
+      "gap": "Only prints a sample; no form/request/credential input or lockout controls.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "pwd.hydra.http"
+      }
+    },
+    {
+      "id": "pwd.hashcat.test",
+      "title": "Hashcat self-test (sanity)",
+      "category": "password",
+      "executor": "kali",
+      "primary_tool": "hashcat",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "supported OpenCL/CUDA/CPU backend"
+      ],
+      "status": "needs-validation",
+      "gap": "Benchmark rather than a full self-test; no compute-backend health interpretation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "pwd.hashcat.test"
+      }
+    },
+    {
+      "id": "pwd.john.show",
+      "title": "John ‘show cracked’ snapshot",
+      "category": "password",
+      "executor": "kali",
+      "primary_tool": "john",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized local hash file",
+        "sufficient file permission"
+      ],
+      "status": "needs-validation",
+      "gap": "Reads executor system shadow path; no authorized file input and privileges/results are ambiguous.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "pwd.john.show"
+      }
+    },
+    {
+      "id": "wifi.ultimate.psk",
+      "title": "🔥 ULTIMATE PSK recovery (PMKID + handshake + auto-crack)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "hashcat",
+      "declared_install": {
+        "apt": "aircrack-ng",
+        "brew": null
+      },
+      "additional_requirements": [
+        "Linux RF hardware",
+        "sudo",
+        "iw/ip/timeout",
+        "hcxdumptool/hcxtools/aircrack-ng/hashcat",
+        "wordlist"
+      ],
+      "status": "needs-validation",
+      "gap": "Primary-tool installer does not cover the whole chain; fixed artifacts, tool-version drift, scope gates and cancellation cleanup remain unresolved.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.ultimate.psk"
+      }
+    },
+    {
+      "id": "wifi.ultimate.wps",
+      "title": "🔥 ULTIMATE WPS recovery (pixie-dust → bully fallback)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "reaver",
+      "declared_install": {
+        "apt": "reaver",
+        "brew": null
+      },
+      "additional_requirements": [
+        "Linux RF hardware",
+        "sudo",
+        "iw/ip/timeout",
+        "reaver/wash/bully"
+      ],
+      "status": "needs-validation",
+      "gap": "Bully/wash/iw dependencies are not fully checked; no reliable run ownership, cleanup or lockout/compatibility assessment.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.ultimate.wps"
+      }
+    },
+    {
+      "id": "wifi.ultimate.bigwordlist",
+      "title": "🔥 ULTIMATE big-wordlist crack (88M words + rules)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "hashcat",
+      "declared_install": {
+        "apt": "hashcat",
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized hash artifact",
+        "hashcat",
+        "compute backend",
+        "wordlist/rule data",
+        "disk/network budget"
+      ],
+      "status": "known-defect",
+      "gap": "Downloads gzip bytes into a .txt filename, then tries to decompress a nonexistent .txt.gz; unnecessary RF gate for offline cracking.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.ultimate.bigwordlist"
+      }
+    },
+    {
+      "id": "wifi.ultimate.evil-twin",
+      "title": "🔥 ULTIMATE evil-twin captive portal (steal PSK from clients)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "wifiphisher",
+      "declared_install": {
+        "apt": "wifiphisher",
+        "brew": null
+      },
+      "additional_requirements": [
+        "interactive TTY",
+        "authorized isolated RF lab",
+        "extra hardware/software"
+      ],
+      "status": "sample-only",
+      "gap": "Prints manual instructions only; title/description overpromise an implemented end-to-end operation. Keep outside normal supported features.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.ultimate.evil-twin"
+      }
+    },
+    {
+      "id": "wifi.ultimate.client-map",
+      "title": "🔥 ULTIMATE client+AP map (5-min channel walk)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "airodump-ng",
+      "declared_install": {
+        "apt": "aircrack-ng",
+        "brew": null
+      },
+      "additional_requirements": [
+        "Linux RF hardware",
+        "sudo",
+        "iw/ip/timeout",
+        "aircrack-ng"
+      ],
+      "status": "needs-validation",
+      "gap": "Unselected broad RF capture and shared files; versioned CSV parser, privacy boundaries and cleanup need review.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.ultimate.client-map"
+      }
+    },
+    {
+      "id": "wifi.ultimate.deauth-storm",
+      "title": "🔥 ULTIMATE deauth storm (mdk4 amok mode — full LAN DoS)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "mdk4",
+      "declared_install": {
+        "apt": "mdk4",
+        "brew": null
+      },
+      "additional_requirements": [
+        "isolated RF lab",
+        "Linux RF hardware",
+        "sudo",
+        "iw/ip/timeout",
+        "mdk4"
+      ],
+      "status": "scope-blocked",
+      "gap": "Does not filter by selected BSSID and can affect unrelated nearby networks. Keep unavailable; do not present as a supported community feature.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.ultimate.deauth-storm"
+      }
+    },
+    {
+      "id": "wifi.iw.list",
+      "title": "List Kali wireless interfaces",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "iw",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "Linux wireless stack"
+      ],
+      "status": "needs-validation",
+      "gap": "Inventory should not require a Wi-Fi target or RF-range confirmation; Linux-only route must be explicit.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.iw.list"
+      }
+    },
+    {
+      "id": "wifi.airodump.scan",
+      "title": "airodump-ng — capture nearby APs + clients",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "airodump-ng",
+      "declared_install": {
+        "apt": "aircrack-ng",
+        "brew": null
+      },
+      "additional_requirements": [
+        "Linux RF hardware",
+        "sudo",
+        "iw/ip/timeout",
+        "aircrack-ng"
+      ],
+      "status": "needs-validation",
+      "gap": "Incomplete noninteractive sudo handling, monitor-mode fallback, shared artifact cleanup and broad-capture boundaries.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.airodump.scan"
+      }
+    },
+    {
+      "id": "wifi.handshake.capture",
+      "title": "WPA handshake capture (deauth + airodump)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "aireplay-ng",
+      "declared_install": {
+        "apt": "aircrack-ng",
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized RF target",
+        "Linux RF hardware",
+        "sudo",
+        "iw/ip/timeout",
+        "aircrack-ng",
+        "hcxtools"
+      ],
+      "status": "needs-validation",
+      "gap": "Secondary converter missing from install metadata; shared artifacts and background child cleanup lack per-run ownership.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.handshake.capture"
+      }
+    },
+    {
+      "id": "wifi.pmkid.attack",
+      "title": "WPA PMKID attack (hcxdumptool)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "hcxdumptool",
+      "declared_install": {
+        "apt": "hcxdumptool",
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized RF target",
+        "Linux RF hardware",
+        "sudo",
+        "iw/timeout",
+        "hcxdumptool",
+        "hcxtools"
+      ],
+      "status": "needs-validation",
+      "gap": "Operates on a managed interface; tool-version options, converter dependency, connectivity preservation and artifact ownership are unchecked.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.pmkid.attack"
+      }
+    },
+    {
+      "id": "wifi.deauth.broadcast",
+      "title": "Deauth burst (aireplay-ng -0)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "aireplay-ng",
+      "declared_install": {
+        "apt": "aircrack-ng",
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized isolated RF target",
+        "Linux RF hardware",
+        "sudo",
+        "iw/ip",
+        "aircrack-ng"
+      ],
+      "status": "needs-validation",
+      "gap": "Selected BSSID is present but channel-setting/PMF capability checks and reliable cancellation/cleanup are absent.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.deauth.broadcast"
+      }
+    },
+    {
+      "id": "wifi.rogue.eaphammer",
+      "title": "Evil-twin / rogue AP (eaphammer)",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "eaphammer",
+      "declared_install": {
+        "apt": "eaphammer",
+        "brew": null
+      },
+      "additional_requirements": [
+        "interactive TTY",
+        "authorized isolated RF lab",
+        "eaphammer dependencies"
+      ],
+      "status": "sample-only",
+      "gap": "Only prints manual setup; interactive session lifecycle and authorized scope are not implemented.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.rogue.eaphammer"
+      }
+    },
+    {
+      "id": "wifi.wps.pixie",
+      "title": "WPS pixie-dust attack",
+      "category": "wireless",
+      "executor": "kaliRange",
+      "primary_tool": "reaver",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized RF target",
+        "Linux RF hardware",
+        "sudo",
+        "iw/ip/timeout",
+        "reaver"
+      ],
+      "status": "needs-validation",
+      "gap": "Version/device support, complete dependency preflight and owned monitor cleanup need validation.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "wifi.wps.pixie"
+      }
+    },
+    {
+      "id": "printer.pjl.banner",
+      "title": "PJL banner (raw 9100)",
+      "category": "printer",
+      "executor": "auto",
+      "primary_tool": "nc",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "compatible nc",
+        "timeout",
+        "authorized PJL service"
+      ],
+      "status": "known-defect",
+      "gap": "Auto route can run on macOS, whose nc lacks Linux -q; timeout is also not a macOS base command.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "printer.pjl.banner"
+      }
+    },
+    {
+      "id": "printer.ipp.attrs",
+      "title": "IPP attributes (port 631)",
+      "category": "printer",
+      "executor": "kali",
+      "primary_tool": "ipptool",
+      "declared_install": {
+        "apt": "cups-ipp-utils",
+        "brew": null
+      },
+      "additional_requirements": [
+        "cups-ipp-utils test data",
+        "curl",
+        "xxd",
+        "IPP service"
+      ],
+      "status": "needs-validation",
+      "gap": "IPP test-file location and fallback payload must be validated against a fixture; no parsed capability result.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "printer.ipp.attrs"
+      }
+    },
+    {
+      "id": "printer.test.page",
+      "title": "Print a test page (lpr)",
+      "category": "printer",
+      "executor": "auto",
+      "primary_tool": "lpr",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "explicit authorized printer queue/server"
+      ],
+      "status": "known-defect",
+      "gap": "References an unconfigured synthetic printer queue; print-server/queue selection is missing and can affect real hardware.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "printer.test.page"
+      }
+    },
+    {
+      "id": "printer.praeda",
+      "title": "PRAEDA (printer info harvest)",
+      "category": "printer",
+      "executor": "kali",
+      "primary_tool": "praeda",
+      "declared_install": {
+        "apt": "praeda",
+        "brew": null
+      },
+      "additional_requirements": [
+        "PRAEDA support data",
+        "authorized printer service"
+      ],
+      "status": "needs-validation",
+      "gap": "Tool/package/CLI compatibility and support data are unchecked; unstructured output does not establish findings.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "printer.praeda"
+      }
+    },
+    {
+      "id": "iot.mqtt.probe",
+      "title": "MQTT broker probe (1883/8883)",
+      "category": "iot",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "NSE mqtt-subscribe",
+        "authorized MQTT broker/topics"
+      ],
+      "status": "needs-validation",
+      "gap": "NSE availability and subscription privacy scope need checks; advertised TLS ports do not imply authenticated/TLS coverage.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "iot.mqtt.probe"
+      }
+    },
+    {
+      "id": "iot.mqtt.subscribe",
+      "title": "MQTT subscribe-all (mosquitto_sub)",
+      "category": "iot",
+      "executor": "kali",
+      "primary_tool": "mosquitto_sub",
+      "declared_install": {
+        "apt": "mosquitto-clients",
+        "brew": "mosquitto"
+      },
+      "additional_requirements": [
+        "authorized MQTT topic scope",
+        "broker auth/TLS settings"
+      ],
+      "status": "needs-validation",
+      "gap": "Subscribes to every topic; needs approved topic scope, TLS/auth settings and protected output. Brew metadata is unused on forced-Kali route.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "iot.mqtt.subscribe"
+      }
+    },
+    {
+      "id": "iot.coap.discover",
+      "title": "CoAP discovery (5683)",
+      "category": "iot",
+      "executor": "kali",
+      "primary_tool": "coap-client",
+      "declared_install": {
+        "apt": "libcoap2-bin",
+        "brew": null
+      },
+      "additional_requirements": [
+        "libcoap-compatible coap-client",
+        "CoAP service"
+      ],
+      "status": "needs-validation",
+      "gap": "Package/binary version compatibility, timeout behavior and structured resource parsing are unverified.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "iot.coap.discover"
+      }
+    },
+    {
+      "id": "iot.tplink.kasa",
+      "title": "TP-Link Kasa info (port 9999)",
+      "category": "iot",
+      "executor": "auto",
+      "primary_tool": "python3",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "python3",
+        "supported legacy Kasa TCP protocol"
+      ],
+      "status": "known-defect",
+      "gap": "One recv assumes a complete framed TCP response; legacy protocol only and no fragmented-response fixtures.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "iot.tplink.kasa"
+      }
+    },
+    {
+      "id": "iot.wol.wake",
+      "title": "Wake-on-LAN magic packet",
+      "category": "iot",
+      "executor": "local",
+      "primary_tool": "etherwake",
+      "declared_install": {
+        "apt": null,
+        "brew": "wakeonlan"
+      },
+      "additional_requirements": [
+        "wakeonlan",
+        "explicit target MAC",
+        "broadcast/interface selection"
+      ],
+      "status": "known-defect",
+      "gap": "Both branches receive target IP where a MAC is required; primary tool does not match brew-installed fallback.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "iot.wol.wake"
+      }
+    },
+    {
+      "id": "iot.zigbee.scan",
+      "title": "Zigbee / Z-Wave radio scan (ZGRAT)",
+      "category": "iot",
+      "executor": "kali",
+      "primary_tool": "whsniff",
+      "declared_install": {
+        "apt": "whsniff",
+        "brew": null
+      },
+      "additional_requirements": [
+        "compatible IEEE 802.15.4 USB sniffer",
+        "whsniff",
+        "timeout",
+        "Linux USB access"
+      ],
+      "status": "known-defect",
+      "gap": "Title conflates Zigbee and Z-Wave; requires specific USB capture hardware and does not inspect selected IP.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "iot.zigbee.scan"
+      }
+    },
+    {
+      "id": "dns.zone-transfer",
+      "title": "DNS zone transfer (AXFR)",
+      "category": "dns",
+      "executor": "auto",
+      "primary_tool": "dig",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "host",
+        "dig",
+        "explicit authorized DNS zone"
+      ],
+      "status": "needs-validation",
+      "gap": "Reverse-DNS hostname is not a zone name; needs authorized zone input and DNS-service reachability.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "dns.zone-transfer"
+      }
+    },
+    {
+      "id": "dns.dnsx.bruteforce",
+      "title": "Subdomain bruteforce (dnsx)",
+      "category": "dns",
+      "executor": "kali",
+      "primary_tool": "dnsx",
+      "declared_install": {
+        "apt": "dnsx",
+        "brew": null
+      },
+      "additional_requirements": [
+        "host",
+        "dnsx",
+        "authorized domain/resolver"
+      ],
+      "status": "known-defect",
+      "gap": "Builds names from unvalidated reverse DNS; no explicit authorized domain or resolver configuration.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "dns.dnsx.bruteforce"
+      }
+    },
+    {
+      "id": "dns.traceroute",
+      "title": "Path trace (mtr / traceroute)",
+      "category": "dns",
+      "executor": "auto",
+      "primary_tool": "mtr",
+      "declared_install": {
+        "apt": null,
+        "brew": "mtr"
+      },
+      "additional_requirements": [
+        "mtr",
+        "traceroute fallback",
+        "network permission"
+      ],
+      "status": "needs-validation",
+      "gap": "mtr permissions and fallback availability are unchecked; failure inside pipes can hide fallback need.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "dns.traceroute"
+      }
+    },
+    {
+      "id": "bt.scan.local",
+      "title": "Bluetooth scan (this Mac)",
+      "category": "bluetooth",
+      "executor": "local",
+      "primary_tool": "system_profiler",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "macOS Bluetooth system information/permission"
+      ],
+      "status": "known-defect",
+      "gap": "system_profiler lists local Bluetooth state/known devices; it is not a general active scan of selected LAN device.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "bt.scan.local"
+      }
+    },
+    {
+      "id": "bt.le.scan",
+      "title": "Bluetooth LE scan (hcitool)",
+      "category": "bluetooth",
+      "executor": "kali",
+      "primary_tool": "hcitool",
+      "declared_install": {
+        "apt": "bluez",
+        "brew": null
+      },
+      "additional_requirements": [
+        "Linux Bluetooth adapter",
+        "BlueZ",
+        "timeout",
+        "permission"
+      ],
+      "status": "needs-validation",
+      "gap": "Linux adapter/privileges, obsolete hcitool support and target-independent capture scope need checks.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "bt.le.scan"
+      }
+    },
+    {
+      "id": "mobile.airdrop.beacon",
+      "title": "AirDrop beacon scan",
+      "category": "mobile",
+      "executor": "kali",
+      "primary_tool": "hcitool",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "Linux Bluetooth adapter",
+        "hcitool",
+        "timeout",
+        "permission"
+      ],
+      "status": "known-defect",
+      "gap": "Generic BLE scan has no AirDrop decoder/classifier; title overstates what is detected.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "mobile.airdrop.beacon"
+      }
+    },
+    {
+      "id": "mobile.adb.connect",
+      "title": "ADB connect (Android dev port 5555)",
+      "category": "mobile",
+      "executor": "auto",
+      "primary_tool": "adb",
+      "declared_install": {
+        "apt": null,
+        "brew": "android-platform-tools"
+      },
+      "additional_requirements": [
+        "android-platform-tools",
+        "explicitly authorized ADB pairing"
+      ],
+      "status": "needs-validation",
+      "gap": "Requires enabled/pairable ADB; assumes legacy port 5555, lacks authorization/disconnect cleanup and structured device details.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "destructive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "mobile.adb.connect"
+      }
+    },
+    {
+      "id": "mitm.bettercap.recon",
+      "title": "Bettercap host recon (1 sweep)",
+      "category": "mitm",
+      "executor": "kali",
+      "primary_tool": "bettercap",
+      "declared_install": {
+        "apt": "bettercap",
+        "brew": null
+      },
+      "additional_requirements": [
+        "bettercap",
+        "authorized executor network/interface",
+        "privileges"
+      ],
+      "status": "needs-validation",
+      "gap": "Ignores selected host and scans executor LAN; raw-network privileges/interface and tool-version compatibility are not preflighted.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "mitm.bettercap.recon"
+      }
+    },
+    {
+      "id": "mitm.dns.captive",
+      "title": "Captive portal DNS check",
+      "category": "mitm",
+      "executor": "auto",
+      "primary_tool": "dig",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "dig",
+        "curl",
+        "external DNS/HTTP test endpoints"
+      ],
+      "status": "needs-validation",
+      "gap": "Measures executor connectivity and selected DNS server, not selected client Internet access; no reliable portal verdict.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "passive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "mitm.dns.captive"
+      }
+    },
+    {
+      "id": "exploit.eternal.blue",
+      "title": "Check EternalBlue / MS17-010",
+      "category": "exploit",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "NSE smb-vuln-ms17-010",
+        "authorized SMB service"
+      ],
+      "status": "needs-validation",
+      "gap": "NSE detection only; validate script/version and distinguish vulnerable, patched, unreachable and unknown.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "exploit.eternal.blue"
+      }
+    },
+    {
+      "id": "exploit.bluekeep",
+      "title": "Check BlueKeep / CVE-2019-0708",
+      "category": "exploit",
+      "executor": "auto",
+      "primary_tool": "nmap",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "appropriate audited RDP detection method"
+      ],
+      "status": "known-defect",
+      "gap": "Runs rdp-vuln-ms12-020, which checks a different vulnerability than BlueKeep/CVE-2019-0708.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "observation",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "exploit.bluekeep"
+      }
+    },
+    {
+      "id": "exploit.log4shell.probe",
+      "title": "Log4Shell probe (CVE-2021-44228)",
+      "category": "exploit",
+      "executor": "auto",
+      "primary_tool": "curl",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "authorized HTTP service",
+        "explicit evidence mechanism"
+      ],
+      "status": "incomplete",
+      "gap": "Sends marker requests but has no controlled callback/evidence channel; HTTP status cannot establish Log4Shell.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "exploit.log4shell.probe"
+      }
+    },
+    {
+      "id": "exploit.shellshock",
+      "title": "Shellshock CGI probe (CVE-2014-6271)",
+      "category": "exploit",
+      "executor": "auto",
+      "primary_tool": "curl",
+      "declared_install": {
+        "apt": null,
+        "brew": null
+      },
+      "additional_requirements": [
+        "curl",
+        "authorized CGI service"
+      ],
+      "status": "needs-validation",
+      "gap": "Fixed CGI paths and marker matching need fixture validation; no separation of absent endpoint, transport error and unaffected target.",
+      "verification": {
+        "current": "source-review-only",
+        "offline_coverage": null,
+        "historical_live": null
+      },
+      "requires_audio_file": false,
+      "declared_danger": "intrusive",
+      "source": {
+        "path": "App/Kali/AttackCatalog.swift",
+        "id": "exploit.shellshock"
+      }
+    }
+  ],
+  "other_app_actions": [
+    {
+      "action": "Engage / Stop / automatic new-target reconciliation",
+      "sources": [
+        "App/State/AppCoordinator.swift",
+        "Helper/Sources/Service/HelperService.swift"
+      ],
+      "remaining_work": "Implemented IPv4 peer targeting; complete Internet denial across IPv6, isolation and protected peers is not established. Stop currently announces idle before cleanup completes; restoration failures may be suppressed by generation checks.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "Trust / untrust and profiles",
+      "sources": [
+        "App/State/AppStore.swift",
+        "App/Features/Profiles/ProfilesView.swift"
+      ],
+      "remaining_work": "MAC-based allowlists and JSON profile persistence exist. Validate persistence failures, duplicate SSIDs, network identity changes and randomized MAC behavior; metadata is not identity proof.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "Continuous device discovery / identity / Lobby / Recon",
+      "sources": [
+        "App/State/AppCoordinator.swift",
+        "App/State/AppStore.swift",
+        "App/State/UPnPDiscovery.swift",
+        "App/State/MDNSAppEnricher.swift"
+      ],
+      "remaining_work": "Discovery/enrichment exists. Missed peers remain retained without reliable departure/return state; not all observations imply current reachability. Unknown devices must remain unknown. Coverage and UI consistency need fixtures and bounded expiry.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "Throughput / speed test",
+      "sources": [
+        "App/State/AppCoordinator.swift",
+        "Helper/CSources/wm_pcap.c",
+        "Helper/Sources/Speed/SpeedTester.swift"
+      ],
+      "remaining_work": "Throughput counts observable frames, not all LAN traffic or accurate per-device Internet upload/download. Speed-test failures collapse to zero and HTTP status is not validated. TCP-connect failures are not ICMP packet loss.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "Nearby Wi-Fi scan / Join / Disconnect / hidden network",
+      "sources": [
+        "App/Features/NetworkPicker/NetworksView.swift",
+        "Helper/Sources/WiFi/WiFiManager.swift"
+      ],
+      "remaining_work": "Actions exist; OS permissions, unavailable scan context, confirmed post-join network identity and error reporting need acceptance coverage. Do not infer empty results prove AP isolation.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "Saved-password reveal / forget / recovery suggestions",
+      "sources": [
+        "App/Features/NetworkPicker/NetworksView.swift",
+        "App/Features/NetworkPicker/PasswordRecoverySheet.swift",
+        "App/State/WiFiPasswordRecovery.swift"
+      ],
+      "remaining_work": "Keychain/password actions and candidate suggestions exist. Vendor/default candidates are hypotheses, not recovered passwords. Verify secure handling and actual join outcome; RF recovery handoffs inherit unfinished catalog work.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "Schedule",
+      "sources": [
+        "App/Features/Profiles/ScheduleView.swift",
+        "Shared/Sources/Models/Profile.swift"
+      ],
+      "remaining_work": "UI persists days/hours/enabled state. No schedule execution consumer was found in AppCoordinator/helper; automatic enforcement is unfinished. Time zones, overnight ranges, sleep/wake and explicit scope gates remain undecided.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "Helper install / connect / reinstall / ping / quit",
+      "sources": [
+        "App/State/HelperClient.swift",
+        "Scripts/install-helper.sh",
+        "Shared/Sources/Protocols/HelperProtocol.swift"
+      ],
+      "remaining_work": "Authenticated helper path and exact personal-build signature pin exist. No app/helper protocol version negotiation; reinstall/upgrade/rollback and reconnection snapshots need release tests. Admin approval is expected; Connected alone does not establish engine health.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "New-device notifications / menu bar / onboarding",
+      "sources": [
+        "App/State/AppStore.swift",
+        "App/Features/MenuBar/MenuBarPanel.swift",
+        "App/Features/Onboarding/OnboardingView.swift"
+      ],
+      "remaining_work": "New-device notifications exist; departure/return history is incomplete. Validate permission denial, deduplication, menu-bar/app state agreement and small-window accessibility without triggering real actions.",
+      "verification": "source-review-only"
+    },
+    {
+      "action": "Automatic bandwidth-hog blocking / block modes",
+      "sources": [
+        "App/Features/Profiles/ProfilesView.swift",
+        "Shared/Sources/Models/Profile.swift",
+        "Helper/Sources/Spoof/ARPSpoofer.swift"
+      ],
+      "remaining_work": "Bandwidth-hog toggle/threshold are stored, but no enforcement consumer was found. Stealth sampling exists in ARPSpoofer; its end-to-end behavior with the active responder and accurate traffic measurements needs verification. Do not describe either as confirmed QoS.",
+      "verification": "source-review-only"
+    }
+  ]
+}

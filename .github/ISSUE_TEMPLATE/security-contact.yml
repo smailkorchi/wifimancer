@@ -1,0 +1,14 @@
+name: Private security contact request
+description: Request a private reporting route only if GitHub private reporting is unavailable.
+title: "Private security contact requested"
+body:
+  - type: markdown
+    attributes:
+      value: "First check SECURITY.md and the repository's Security → Advisories page for Report a vulnerability. Use this form only when that private action is unavailable. Do not include vulnerability details, affected endpoints, logs, credentials or attachments. A maintainer will arrange a private route."
+  - type: checkboxes
+    id: request
+    attributes:
+      label: Private route needed
+      options:
+        - label: "GitHub's private reporting action is unavailable and I need a private contact route. This public request contains no vulnerability details."
+          required: true

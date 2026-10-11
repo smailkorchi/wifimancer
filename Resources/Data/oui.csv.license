@@ -1,0 +1,13 @@
+SPDX-License-Identifier: GPL-2.0-or-later
+SPDX-FileCopyrightText: Wireshark contributors
+
+This compact vendor CSV was derived from TShark/Wireshark manufacturer data.
+It is excluded from the original project's MIT grant. The original capture
+version/date is not recorded. Existing entries are preserved; attribution and
+license headers were added on 2026-10-11.
+
+Source: https://www.wireshark.org/download/automated/data/manuf.gz
+Upstream data: https://github.com/wireshark/wireshark/blob/master/epan/manuf-data.c
+Upstream generator: https://github.com/wireshark/wireshark/blob/master/tools/make-manuf.py
+License: ../../../LICENSES/GPL-2.0-or-later.txt
+Original compact CSV SHA-256: 98f472f0e0c6d3d51736875cd2cccf375144be0674ef0bbf3183172e53ce9f4e

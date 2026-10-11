@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion><major>1</major><minor>0</minor></specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:MediaRenderer:1</deviceType>
+    <friendlyName>75&quot; Crystal UHD</friendlyName>
+    <manufacturer>Samsung Electronics</manufacturer>
+    <modelDescription>Samsung DTV RCR</modelDescription>
+    <modelName>UA75DU7000UXMV</modelName>
+    <modelNumber>DU7000</modelNumber>
+    <serviceList>
+      <service><serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType></service>
+      <service><serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType></service>
+    </serviceList>
+  </device>
+</root>

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and discussion
+    url: https://github.com/smailkorchi/wifimancer/discussions
+    about: Ask usage or design questions in Discussions once the community area is enabled.
+  - name: Security reporting instructions
+    url: https://github.com/smailkorchi/wifimancer/security/policy
+    about: Read the private reporting procedure; do not disclose vulnerabilities in public issues.

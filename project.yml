@@ -1,0 +1,198 @@
+name: WifiMancer
+options:
+  bundleIdPrefix: com.wifimancer
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  groupSortPosition: top
+  generateEmptyDirectories: false
+  defaultConfig: Debug
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    CODE_SIGN_STYLE: Automatic
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_HARDENED_RUNTIME: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    GCC_C_LANGUAGE_STANDARD: c17
+    CLANG_CXX_LANGUAGE_STANDARD: "c++20"
+    ARCHS: "arm64"
+    ONLY_ACTIVE_ARCH: YES
+    HEADER_SEARCH_PATHS:
+      - "$(SRCROOT)/Helper/CSources/include"
+
+configs:
+  Debug: debug
+  Release: release
+
+targets:
+
+  WifiMancer:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+      - path: Shared/Sources
+      - path: Resources
+        excludes:
+          - "Assets.xcassets/Contents.json"
+    resources:
+      - path: Resources/Fonts
+      - path: Resources/Data
+      - path: Resources/Shaders
+      - path: Resources/Assets.xcassets
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleName: "Wifi Mancer"
+        CFBundleDisplayName: "Wifi Mancer"
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        CFBundleGetInfoString: "Wifi Mancer 1.0.0, © 2026 El Qorchi Ismail"
+        NSHumanReadableCopyright: "© 2026 El Qorchi Ismail. All rights reserved."
+        LSMinimumSystemVersion: "14.0"
+        LSUIElement: false
+        NSHighResolutionCapable: true
+        NSPrincipalClass: NSApplication
+        NSQuitAlwaysKeepsWindows: false
+        NSDisablePersistenceUI: true
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        NSLocalNetworkUsageDescription: WifiMancer needs local network access to discover devices on your Wi-Fi.
+        NSLocationUsageDescription: macOS hides Wi-Fi network names from apps unless they have Location permission. Wifi Mancer never reads your location — it only uses this to read the SSID you're already connected to.
+        NSLocationWhenInUseUsageDescription: macOS hides Wi-Fi network names from apps unless they have Location permission. Wifi Mancer never reads your location — it only uses this to read the SSID you're already connected to.
+        NSLocationAlwaysAndWhenInUseUsageDescription: macOS hides Wi-Fi network names from apps unless they have Location permission. Wifi Mancer never reads your location — it only uses this to read the SSID you're already connected to.
+        NSBonjourServices:
+          - _services._dns-sd._udp.
+          - _device-info._tcp.
+          - _airplay._tcp.
+          - _raop._tcp.
+          - _companion-link._tcp.
+          - _smb._tcp.
+          - _afpovertcp._tcp.
+          - _ssh._tcp.
+          - _sftp-ssh._tcp.
+          - _http._tcp.
+          - _https._tcp.
+          - _rfb._tcp.
+          - _rtsp._tcp.
+          - _googlecast._tcp.
+          - _printer._tcp.
+          - _ipp._tcp.
+          - _ipps._tcp.
+          - _hap._tcp.
+          - _homekit._tcp.
+          - _apple-mobdev2._tcp.
+          - _workstation._tcp.
+          - _spotify-connect._tcp.
+          - _eppc._tcp.
+          - _net-assistant._udp.
+        SMPrivilegedExecutables:
+          com.wifimancer.helper: "anchor apple generic"
+        LSApplicationCategoryType: public.app-category.utilities
+    entitlements:
+      path: App/WifiMancer.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wifimancer.app
+        PRODUCT_NAME: "Wifi Mancer"
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        INFOPLIST_KEY_LSUIElement: NO
+        SWIFT_OBJC_BRIDGING_HEADER: ""
+    dependencies:
+      - target: WifiMancerHelper
+        embed: false
+        link: false
+    postBuildScripts:
+      - name: "Embed helper as LaunchDaemon"
+        script: |
+          set -e
+          DAEMONS="$BUILT_PRODUCTS_DIR/Wifi Mancer.app/Contents/Library/LaunchDaemons"
+          mkdir -p "$DAEMONS"
+          # Helper binary built by the WifiMancerHelper target. PRODUCT_NAME
+          # defaults to the target name; bundle identifier is com.wifimancer.helper
+          # so we copy + rename to match the LaunchDaemon Label.
+          cp "$BUILT_PRODUCTS_DIR/WifiMancerHelper" "$DAEMONS/com.wifimancer.helper"
+          chmod 755 "$DAEMONS/com.wifimancer.helper"
+          # Sign with the helper's entitlements so its Mach-service registration
+          # and packet-injection privileges actually work at runtime.
+          codesign --force --sign - \
+            --entitlements "$SRCROOT/Helper/WifiMancerHelper.entitlements" \
+            --identifier com.wifimancer.helper \
+            --timestamp=none \
+            --generate-entitlement-der \
+            "$DAEMONS/com.wifimancer.helper"
+          # Embed the plist so SMAppService.daemon(plistName:) can find it.
+          # The plist uses BundleProgram so it works regardless of the .app's
+          # actual filesystem location (DerivedData / /Applications / etc).
+          cp "$SRCROOT/Helper/com.wifimancer.helper.plist" "$DAEMONS/com.wifimancer.helper.plist"
+          # Drop the duplicate that XcodeGen previously embedded as a Resource.
+          rm -f "$BUILT_PRODUCTS_DIR/Wifi Mancer.app/Contents/Resources/WifiMancerHelper"
+          # Re-sign the whole app so the new contents are covered by the
+          # outer signature; otherwise launchd refuses to run the helper
+          # (signature broken by adding the plist).
+          codesign --force --sign - --deep --timestamp=none \
+            --entitlements "$SRCROOT/App/WifiMancer.entitlements" \
+            "$BUILT_PRODUCTS_DIR/Wifi Mancer.app"
+          echo "[helper embedded] $DAEMONS/com.wifimancer.helper"
+          echo "[plist embedded]  $DAEMONS/com.wifimancer.helper.plist"
+        basedOnDependencyAnalysis: false
+
+  WifiMancerHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Helper/Sources
+      - path: Helper/CSources
+      - path: Shared/Sources
+    info:
+      path: Helper/Info.plist
+      properties:
+        CFBundleIdentifier: com.wifimancer.helper
+        CFBundleName: com.wifimancer.helper
+        CFBundleVersion: "1"
+        CFBundleShortVersionString: "1.0.0"
+        NSHumanReadableCopyright: "© 2026 El Qorchi Ismail. All rights reserved."
+        SMAuthorizedClients:
+          - "anchor apple generic"
+    entitlements:
+      path: Helper/WifiMancerHelper.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wifimancer.helper
+        SKIP_INSTALL: NO
+        INSTALL_PATH: "$(LOCAL_APPS_DIR)/Wifi Mancer.app/Contents/Library/LaunchDaemons"
+        SWIFT_OBJC_BRIDGING_HEADER: Helper/CSources/include/WifiMancerHelper-Bridging-Header.h
+        # Link against the SDK's libpcap stub so the resulting binary records
+        # /usr/lib/libpcap.A.dylib as its dependency (the platform copy that
+        # ships in the dyld shared cache). Using bare `-lpcap` lets the linker
+        # find Homebrew's /opt/homebrew/opt/libpcap/lib/libpcap.A.dylib via
+        # whatever LIBRARY_PATH leaked in from the user's shell — and dyld
+        # then refuses to load that into a privileged daemon because the
+        # Homebrew dylib has a non-Apple Team ID. Pinning to the SDK tbd is
+        # the only way to keep the linkage stable across machines.
+        OTHER_LDFLAGS: "$(SDKROOT)/usr/lib/libpcap.tbd -framework CoreWLAN -framework Network -framework SystemConfiguration"
+
+schemes:
+  WifiMancer:
+    build:
+      targets:
+        WifiMancer: all
+        WifiMancerHelper: all
+    run:
+      config: Debug
+      executable: WifiMancer
+    archive:
+      config: Release

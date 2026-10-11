@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {
+    font-family: -apple-system, "Helvetica Neue", sans-serif;
+    color: #faf9f5;
+    background: #141413;
+    margin: 0;
+    padding: 22px 28px 18px;
+    line-height: 1.45;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    letter-spacing: -0.5px;
+  }
+  p {
+    font-size: 14px;
+    color: #c9c7be;
+    margin: 0 0 12px;
+  }
+  .accent { color: #ef9e7e; font-weight: 600; }
+  ul {
+    margin: 14px 0 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  li {
+    font-size: 14px;
+    color: #c9c7be;
+    padding: 6px 0;
+    border-top: 1px solid rgba(250, 249, 245, 0.06);
+  }
+  li:first-child { border-top: none; }
+  li b { color: #faf9f5; font-weight: 600; }
+  .foot {
+    margin-top: 14px;
+    font-size: 14px;
+    color: #c9c7be;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<h1>Wifi Mancer</h1>
+<p><span class="accent">Native macOS network visibility.</span><br>
+This experimental installer places Wifi Mancer in <b>/Applications</b>.
+Personal builds also need the reviewed helper installer to establish
+the exact client-signature pin. See the repository README.</p>
+
+<ul>
+  <li><b>App</b> &nbsp;·&nbsp; native SwiftUI interface</li>
+  <li><b>Helper</b> &nbsp;·&nbsp; loaded as a system LaunchDaemon, idle until used</li>
+  <li><b>Network access</b> &nbsp;·&nbsp; discovery is local; speed tests and optional tools may contact external services</li>
+  <li><b>Permissions</b> &nbsp;·&nbsp; administrator approval for helper installation and signature-pin updates</li>
+</ul>
+
+<p class="foot">Continue to read the license, then click Install.</p>
+
+</body>
+</html>

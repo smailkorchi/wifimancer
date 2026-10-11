@@ -1,0 +1,15 @@
+body:
+  - type: textarea
+    id: result
+    attributes:
+      label: What you built or verified
+      description: "Share the revision, method, actual evidence and limits. Offline fixtures and UI improvements are useful. Check LICENSE before distributing modified code or binaries."
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Publication check
+      options:
+        - label: "All screenshots, samples and attachments are redacted and come from authorized work."
+          required: true
